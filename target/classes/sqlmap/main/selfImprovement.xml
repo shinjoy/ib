@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="self">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="selfVO" type="ib.selfImprovement.service.SelfImprovementVO"/>
+
+	<select id="selfImprovementDAO.selectSelfImprovementList" parameterClass="selfVO" resultClass="selfVO">
+		<![CDATA[
+			SELECT
+					  A.S_NB			as sNb
+					, A.TITLE			as title
+					, (case 
+						   when (A.TITLE_CD+0) = '00000' then '무제'
+						   when A.TITLE_CD = '00001' then '교육'
+						   when A.TITLE_CD = '00002' then '도서'
+						   when A.TITLE_CD = '00003' then '자격' end)	titleCd
+					, A.ISSUE			as issue
+					, A.SUPPORT			as support
+					, A.PROOF			as proof
+					, A.NOTE			as note
+					, DATE(A.OBTAIN_DT)	as obtainDt
+					, A.RG_ID			as rgId
+					, B.USR_NM			as usrNm
+					, GROUP_CONCAT(J1.realNm SEPARATOR '^^^')   as realNm
+					, GROUP_CONCAT(J1.makeNm SEPARATOR '^^^')   as makeNm
+					, GROUP_CONCAT(J1.SUB_CD SEPARATOR '^^^')   as subCd
+			  FROM IB_SELF_IMPROVEMENT A
+			  LEFT JOIN IB_STAFF B ON B.USR_ID = A.RG_ID 
+			  LEFT OUTER JOIN 
+					(SELECT SUB_CD
+						  , REAL_NAME as realNm
+						  , MAKE_NAME as makeNm
+					   FROM IB_FILE_INFO
+					  WHERE REPORT_YN = '1'
+					   
+					) J1 ON A.S_NB = J1.SUB_CD
+		]]>
+		<dynamic prepend="WHERE">
+            <isNotEmpty prepend="AND" property="usrId">
+				<![CDATA[	A.RG_ID = #usrId#		]]>
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="choice_year">
+				<![CDATA[	A.RG_DT between CONCAT (#choice_year#, '0101') and CONCAT (#choice_year#, '1231235959') 		]]>
+			</isNotEmpty>
+		</dynamic>
+			GROUP BY A.S_NB
+			ORDER BY A.OBTAIN_DT DESC
+	</select>
+
+
+	<select id="selfImprovementDAO.selectTempFile" parameterClass="selfVO" resultClass="egovMap">
+		<![CDATA[
+			SELECT
+				   REAL_NAME		as realNm
+				 , MAKE_NAME		as makeNm
+			  FROM IB_FILE_INFO
+			 WHERE SUB_CD = '0'
+			   AND REPORT_YN = '1'
+		]]>
+	</select>
+
+	<insert id="selfImprovementDAO.insertList">
+		<![CDATA[
+			INSERT INTO IB_SELF_IMPROVEMENT 
+				  ( TITLE
+				  , TITLE_CD
+				  , ISSUE
+				  , PROOF
+				  , SUPPORT
+				  , OBTAIN_DT
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #title#
+		 		  , #titleCd#
+				  , #issue#
+				  , #proof#
+				  , #support#
+				  , #obtainDt#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+	</insert>
+	
+	<delete id="selfImprovementDAO.deleteSelf">
+		<![CDATA[
+			DELETE FROM IB_SELF_IMPROVEMENT 
+			 WHERE S_NB  =  #sNb#
+		]]>
+	</delete>	
+	<delete id="selfImprovementDAO.deleteSelfFile">
+		<![CDATA[
+			DELETE FROM IB_FILE_INFO 
+			 WHERE SUB_CD  =  #sNb#
+		]]>
+	</delete>
+
+
+	
+	<update id="selfImprovementDAO.insertNote">
+		<![CDATA[
+			UPDATE IB_SELF_IMPROVEMENT 
+			SET 
+				  NOTE       =  #note#
+				, UP_DT      =  now()
+				, UP_ID      =  #rgId#
+			WHERE S_NB       =  #sNb#
+		]]>
+	</update>
+
+	<select id="selfImprovementDAO.selectBookList" parameterClass="selfVO" resultClass="selfVO">
+		<![CDATA[
+			SELECT
+					A.S_NB				as sNb
+				 ,  A.BOOK_NUMBER		as bookNum
+				 ,  A.TITLE				as title
+				 ,  A.AUTHOR			as author
+				 ,  A.EPILOGUE			as epilogue
+				 ,  A.RENT				as rent
+				 ,  A.RG_ID				as rgId
+				 ,  B.USR_NM			as usrNm
+			  FROM	IB_BOOK  A
+		 LEFT JOIN  IB_STAFF B ON B.USR_ID = A.RG_ID
+		]]>
+		<dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="search">
+				<![CDATA[	A.TITLE LIKE CONCAT('%',#search#,'%') OR A.AUTHOR LIKE CONCAT('%',#search#,'%') OR A.BOOK_NUMBER LIKE CONCAT('%',#search#,'%')	]]>
+			</isNotEmpty>
+		</dynamic>
+		 <dynamic prepend="ORDER BY" >
+			<isEmpty property="sorting"> A.BOOK_NUMBER DESC </isEmpty>
+			<isEqual property="sorting" compareValue="1"> A.TITLE ASC </isEqual>
+			<isEqual property="sorting" compareValue="2"> A.AUTHOR ASC </isEqual>
+		</dynamic>
+	</select>
+
+	<select id="selfImprovementDAO.selectEpilogueList" parameterClass="selfVO" resultClass="selfVO">
+		<![CDATA[
+			SELECT
+					A.S_NB				as sNb
+				 ,  A.BOOK_NUMBER		as bookNum
+				 ,  A.EPILOGUE			as epilogue
+				 ,  A.RG_ID				as rgId
+				 ,  B.USR_NM			as usrNm
+				 ,  DATE(A.RG_DT)		as rgDt
+			  FROM	IB_EPILOGUE  A
+		 LEFT JOIN  IB_STAFF B ON B.USR_ID = A.RG_ID
+		]]>
+		 ORDER BY A.RG_DT DESC
+	</select>
+
+	<insert id="selfImprovementDAO.insertBook">
+		<![CDATA[
+			INSERT INTO IB_BOOK 
+				  ( TITLE
+				  , AUTHOR
+				  , EPILOGUE
+				  , BOOK_NUMBER
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #title#
+		 		  , #author#
+		 		  , #epilogue#
+				  , #bookNum#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+	</insert>
+
+	<insert id="selfImprovementDAO.insertEpilogue">
+		<![CDATA[
+			INSERT INTO IB_EPILOGUE 
+				  ( EPILOGUE
+				  , BOOK_NUMBER
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #epilogue#
+		 		  , #bookNum#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+	</insert>
+	
+	
+	<delete id="selfImprovementDAO.deleteBook">
+		<![CDATA[
+			DELETE FROM IB_BOOK 
+			 WHERE S_NB  =  #sNb#
+		]]>
+	</delete>
+	
+	<delete id="selfImprovementDAO.deleteEpilogue">
+		<![CDATA[
+			DELETE FROM IB_EPILOGUE
+			 WHERE S_NB  =  #sNb#
+		]]>
+	</delete>
+	
+
+
+	<update id="selfImprovementDAO.modifyRent">
+		<![CDATA[
+			UPDATE IB_BOOK 
+			SET 
+				  RENT  	=  #rent#
+				, UP_DT     =  now()
+				, UP_ID     =  #rgId#
+			WHERE S_NB      =  #sNb#
+		]]>
+	</update>
+	
+	<update id="selfImprovementDAO.updateBook">
+		<![CDATA[
+			UPDATE IB_BOOK 
+			SET 
+				  TITLE  	=  #title#
+				, AUTHOR 	=  #author#
+				, EPILOGUE	=  #epilogue#
+				, UP_DT     =  now()
+				, UP_ID     =  #rgId#
+			WHERE S_NB      =  #sNb#
+		]]>
+	</update>
+
+	<select id="selfImprovementDAO.selectReaderList" parameterClass="selfVO" resultClass="selfVO">
+		<![CDATA[
+			SELECT
+					A.S_NB				as sNb
+				 ,  A.BOOK_NUMBER		as bookNum
+				 ,  A.READER_ID			as readerId
+				 ,  A.TURN				as turn
+			  FROM	IB_BOOK_READ  A
+			 WHERE  A.CHK = 'N'
+		 ORDER BY A.BOOK_NUMBER DESC
+		 ]]>
+	</select>
+
+	<select id="selfImprovementDAO.selectReaderListMain" parameterClass="selfVO" resultClass="selfVO">
+		<![CDATA[
+			SELECT
+					A.S_NB				as sNb
+				 ,  A.BOOK_NUMBER		as bookNum
+				 ,  A.READER_ID			as readerId
+				 ,  A.TURN				as turn
+				 ,  C.TITLE				as title
+			  FROM	IB_BOOK_READ  A
+		 LEFT JOIN  IB_BOOK C ON C.BOOK_NUMBER = A.BOOK_NUMBER
+			 WHERE  A.READER_ID = #tmpId#
+			   AND  A.CHK = 'N'
+		 ORDER BY A.BOOK_NUMBER DESC
+		 ]]>
+	</select>
+	
+	<insert id="selfImprovementDAO.saveReader">
+		<![CDATA[
+			INSERT INTO IB_BOOK_READ 
+				  ( BOOK_NUMBER
+				  , READER_ID
+				  , TURN
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #bookNum#
+		 		  , #readerId#
+				  , #turn#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+	</insert>
+		
+	<delete id="selfImprovementDAO.deleteReader">
+		<![CDATA[
+			DELETE FROM IB_BOOK_READ
+			 WHERE BOOK_NUMBER  =  #bookNum#
+		]]>
+	</delete>
+
+	<update id="selfImprovementDAO.updateReader">
+		<![CDATA[
+			UPDATE IB_BOOK_READ
+			SET 
+				  CHK 	 		=  'Y'
+			WHERE BOOK_NUMBER   =  #bookNum#
+			  AND READER_ID		=  #rgId#
+		]]>
+	</update>
+
+	<select id="selfImprovementDAO.selectIdeaListMain" parameterClass="selfVO" resultClass="selfVO">
+		<![CDATA[
+			SELECT
+					A.S_NB				as sNb
+				 ,  A.CD				as cd
+				 ,  A.TITLE				as title
+				 ,  A.IDEA				as idea
+				 ,  A.RCMD_REASON		as reason
+				 ,  A.SCORE				as score
+				 ,  A.PROCESS			as process
+				 ,  A.CST_NM			as cstNm
+				 ,  A.PRIZE				as prize
+				 ,  DATE(A.RG_DT)				as rgDt
+				 ,  DATEDIFF(now(),DATE(A.RG_DT))			as  diffDt
+				 ,  A.RG_ID				as rgId
+				 ,  B.USR_NM			as usrNm
+			  FROM	IB_IDEA_OFFER  A
+		 LEFT JOIN  IB_STAFF B ON B.USR_ID = A.RG_ID
+		 ]]>
+		<dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="choice_year">
+				<![CDATA[	A.RG_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+		</dynamic>
+		<![CDATA[	ORDER BY A.PROCESS ASC, A.RG_DT DESC	]]>
+	</select>
+
+	
+	<insert id="selfImprovementDAO.saveIdea">
+		<![CDATA[
+			INSERT INTO IB_IDEA_OFFER
+				SELECT S_NB + 1
+					, #cd#
+					, #title#
+					, #process#
+					, #cstNm#
+					, #idea#
+					, null
+					, '0'
+					, null
+					, now()
+					, now()
+					, #rgId#
+					, #rgId#
+				FROM IB_IDEA_OFFER ORDER BY S_NB DESC LIMIT 1 
+		]]>
+	</insert>
+		
+	<delete id="selfImprovementDAO.deleteIdea">
+		<![CDATA[
+			DELETE FROM IB_IDEA_OFFER
+			 WHERE S_NB  =  #sNb#
+		]]>
+	</delete>
+
+	<update id="selfImprovementDAO.updateIdea">
+		<![CDATA[
+			UPDATE IB_IDEA_OFFER
+			SET
+			]]><isNotEmpty prepend="" property="title">
+				  CD 	 		=  #cd#
+				, TITLE	 		=  #title#
+				, IDEA	 		=  #idea#
+				, CST_NM 		=  #cstNm#
+			</isNotEmpty><isNotEmpty prepend="" property="score">
+				  SCORE			=  #score#
+				, PRIZE			=  #prize#
+			</isNotEmpty><isEqual property="tmpNum1" compareValue="addStaff">
+				  CST_NM 		=  #cstNm#
+			</isEqual><![CDATA[
+				,UP_DT = NOW()
+				,UP_ID = #rgId#
+			WHERE S_NB   		=  #sNb#
+		]]>
+	</update>
+
+	<select id="selfImprovementDAO.selectIdeaRcmdListMain" parameterClass="selfVO" resultClass="selfVO">
+		<![CDATA[
+			SELECT
+					A.S_NB				as sNb
+				 ,  A.OFFER_S_NB		as offerSnb
+				 ,  A.RCMD_REASON		as reason
+				 ,  DATE(A.RG_DT)		as rgDt
+				 ,  DATEDIFF(now(),DATE(A.RG_DT))			as  diffDt
+				 ,  A.LV_CD				as lvCd
+				 ,  A.RG_ID				as rgId
+				 ,  B.USR_NM			as usrNm
+			  FROM	IB_IDEA_OFFER_RCMD  A
+		 LEFT JOIN  IB_STAFF B ON B.USR_ID = A.RG_ID
+		INNER JOIN  IB_IDEA_OFFER C ON C.S_NB = A.OFFER_S_NB
+		 ]]>
+		<dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="choice_year">
+				<![CDATA[	C.RG_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+		</dynamic>
+	</select>
+	
+	<insert id="selfImprovementDAO.saveRcmd">
+		<![CDATA[
+			INSERT INTO IB_IDEA_OFFER_RCMD
+				SELECT S_NB + 1
+					, #offerSnb#
+					, #reason#
+					, now()
+					, now()
+					, #rgId#
+					, #rgId#
+					, '0'
+				FROM IB_IDEA_OFFER_RCMD ORDER BY S_NB DESC LIMIT 1 
+		]]>
+	</insert>
+		
+	<delete id="selfImprovementDAO.deleteRcmd">
+		<![CDATA[
+			DELETE FROM IB_IDEA_OFFER_RCMD
+			 WHERE S_NB  =  #sNb#
+		]]>
+	</delete>
+
+	<update id="selfImprovementDAO.updateRcmd">
+		<![CDATA[
+			UPDATE IB_IDEA_OFFER_RCMD
+			SET
+				  RCMD_REASON	=  #reason#
+			WHERE S_NB   		=  #sNb#
+		]]>
+	</update>
+	
+	<update id="selfImprovementDAO.updateEval">
+		<![CDATA[
+			UPDATE IB_IDEA_OFFER_RCMD
+			SET
+				  LV_CD			=  #lvCd#
+			WHERE S_NB   		=  #sNb#
+		]]>
+	</update>
+	
+	<update id="selfImprovementDAO.updateProcess">
+		<![CDATA[
+			UPDATE IB_IDEA_OFFER
+			SET
+				  PROCESS		=  #process#
+			WHERE S_NB   		=  #sNb#
+		]]>
+	</update>
+
+	<select id="selfImprovementDAO.selectIdeaCheckList" parameterClass="selfVO" resultClass="selfVO">
+		<![CDATA[
+			SELECT
+					CASE WHEN B.RG_DT> A.UP_DT THEN '코멘트' ELSE '평가점수' END as text
+					,CASE WHEN B.RG_DT> A.UP_DT THEN 'c' ELSE 'n' END as tmpNum1
+					,CASE WHEN B.RG_DT> A.UP_DT THEN B.RG_DT ELSE A.UP_DT END as tmDt
+					,CASE WHEN B.RG_DT> A.UP_DT THEN B1.USR_NM ELSE A1.USR_NM END as rgNm
+					,A.TITLE			as title
+					,A.SCORE			as score
+					,A.PRIZE	 		as prize
+					,A.CST_NM	 		as cstNm
+					,A.UP_DT			as upDt
+					,B.RG_DT			as rgDt
+					,B.RCMD_REASON 		as rcmdReason
+			  FROM  IB_IDEA_OFFER A
+			  JOIN  IB_IDEA_OFFER_RCMD B ON B.OFFER_S_NB = A.S_NB
+		 LEFT JOIN  IB_STAFF B1 ON B1.USR_ID = B.RG_ID
+		 LEFT JOIN  IB_STAFF A1 ON A1.USR_ID = A.UP_ID
+		 LEFT JOIN  IB_STAFF A2 ON A.CST_NM LIKE CONCAT('%',A2.USR_NM,'%')
+			 WHERE 
+					A.SCORE >= 0
+			   AND case when A2.USR_ID != A.RG_ID then A2.USR_ID = #rgId# else A.RG_ID = #rgId# end
+		  ORDER BY  CASE WHEN B.RG_DT> A.UP_DT THEN (B.RG_DT) ELSE A.UP_DT END DESC
+		 ]]>
+	</select>
+</sqlMap>

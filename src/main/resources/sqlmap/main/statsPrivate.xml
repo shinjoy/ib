@@ -1,0 +1,1170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="stats">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	
+
+	<!-- 개인 통계 팝업 -->
+	<select id="statsDAO.selectPrivateStats" parameterClass="HashMap" resultClass="HashMap">
+		
+		SELECT A.S_NB										AS userId
+			 , A.USR_NM 									AS staffNm
+			 , IFNULL(CusInviteSabun, '')					AS CusInviteSabun
+		     , A.USR_ID 									AS staffId
+		     , A.TEAM	 									AS team
+		     , (IFNULL(B.mediateDeal, 0)) 					AS mediateDeal
+		     , (IFNULL(B.directDeal, 0)) 					AS directDeal
+		     
+		     , B.listedDealCnt								AS listedDealCnt				<!-- 상장 	소싱 건수 -->
+		     , B.listedDealPrice							AS listedDealPrice				<!-- 상장	소싱 규모 -->
+		     , B.listedInvestMyCnt							AS listedInvestMyCnt				<!-- 상장	투자 건수 -->
+		     , (B.listedInvestMyTogeCnt+B.listedInvestTogeCnt)		AS listedInvestTogeCnt		<!-- 상장	투자 건수 공동진행 -->
+		     
+		     , B.unlistedDealCnt							AS unlistedDealCnt				<!-- 비상장 	소싱 건수 -->
+		     , B.unlistedDealPrice							AS unlistedDealPrice			<!-- 비상장	소싱 규모 -->
+		     , B.unlistedInvestMyCnt						AS unlistedInvestMyCnt				<!-- 비상장	투자 건수 -->
+		     , (B.unlistedInvestMyTogeCnt+B.unlistedInvestTogeCnt)	AS unlistedInvestTogeCnt	<!-- 상장	투자 건수 공동진행 -->
+		     
+		     , B.ipoInvestMyCnt								AS ipoInvestMyCnt				<!-- 프리IPO	투자 건수 -->
+		     , (B.ipoInvestMyTogeCnt+B.ipoInvestTogeCnt)	AS ipoInvestTogeCnt				<!-- 프리IPO	투자 건수 공동진행 -->
+		     
+		     , B.blockInvestMyCnt								AS blockInvestMyCnt			<!-- 블록딜	투자 건수 -->
+		     , (B.blockInvestMyTogeCnt+B.blockInvestTogeCnt)	AS blockInvestTogeCnt		<!-- 블록딜	투자 건수 공동진행 -->
+		     
+		     
+		     , B.block										AS block						<!-- 블록딜	소싱 건수 -->
+		     , B.blockPrice									AS blockPrice					<!-- 블록딜	소싱 규모 -->
+		     , B.blockInvestCnt								AS blockInvestCnt				<!-- 블록딜	투자 건수 -->
+		     <!-- , B.blockInvestPrice							AS blockInvestPrice -->				<!-- 블록딜	투자 규모 -->
+		     
+		     , (IFNULL(B.dealRgood, 0)) 					AS dealRgood
+		     , (IFNULL(B.dealSgood, 0)) 					AS dealSgood
+		     , (IFNULL(B.mediateDealprice, 0)) 				AS mediateDealprice
+		     , (IFNULL(B.directDealprice, 0)) 				AS directDealprice
+		     , (IFNULL(B.mediateDealpriceGood, 0)) 			AS mediateDealpriceGood
+		     , (IFNULL(B.directDealpriceGood, 0)) 			AS directDealpriceGood
+		     , (IFNULL(B.jointMediateDealpriceGood, 0)) 	AS jointMediateDealpriceGood
+		     , (IFNULL(B.jointDirectDealpriceGood, 0)) 		AS jointDirectDealpriceGood
+		     , (IFNULL(B.jointResaleDealpriceGood, 0)) 		AS jointResaleDealpriceGood
+		     , (IFNULL(B.jointFundDealpriceGood, 0)) 		AS jointFundDealpriceGood
+
+		     , (IFNULL(B.mna, 0)) 							AS mna
+		     
+		     , (IFNULL(B.ipo, 0)) 							AS ipo							<!-- 프리IPO	소싱건수 -->
+		     , (IFNULL(B.ipoPrice, 0))						AS ipoPrice						<!-- 프리IPO	소싱규모 -->
+		     
+		     , (IFNULL(B.spac, 0)) 							AS spac
+		     , (IFNULL(ommc.cnt, 0)) 						AS mnaMcpn
+		     , (IFNULL(B.mnaGood, 0)) 						AS mnaGood
+		     , (IFNULL(B.ipoGood, 0)) 						AS ipoGood						<!-- 프리IPO	투자건수 -->
+		     <!-- , (IFNULL(B.ipoInvestPrice, 0))				AS ipoInvestPrice -->				<!-- 프리IPO	투자규모 -->
+		     
+		     , (IFNULL(B.spacGood, 0)) 						AS spacGood
+		     , (IFNULL(B.memberCpnCast, 0)) 				AS memberCpnCast
+		     , (IFNULL(B.memberCpnIntroduce, 0)) 			AS memberCpnIntroduce
+		     , (IFNULL(B.shareholderCpnCast, 0)) 			AS shareholderCpnCast
+		     , (IFNULL(B.shareholderCpnIntroduce, 0)) 		AS shareholderCpnIntroduce
+		     , (IFNULL(B.memberCpnCastGood, 0)) 			AS memberCpnCastGood
+		     , (IFNULL(B.memberCpnIntroduceGood, 0)) 		AS memberCpnIntroduceGood
+		     , (IFNULL(B.shareholderCpnCastGood, 0)) 		AS shareholderCpnCastGood
+		     , (IFNULL(B.shareholderCpnIntroduceGood, 0)) 	AS shareholderCpnIntroduceGood
+		     , (IFNULL(B.financing, 0)) 					AS financing
+		     , (IFNULL(joint.cnt, 0)) 						AS jointMediate
+
+		     , (IFNULL(F.cusRealMoney, 0)) 					AS cusRealMoney
+		     , (IFNULL(F.cusReSaleMoney, 0)) 				AS cusReSaleMoney
+		     , (IFNULL(F.cusRealJointTotal, 0)) 			AS cusRealJointTotal
+		     , (IFNULL(F.cusRealJointMine, 0)) 				AS cusRealJointMine
+		     , (IFNULL(N1.cnt, 0)) 							AS networkCst
+		     , (IFNULL(N2.cnt, 0)) 							AS networkCpn
+		     , (IFNULL(O.cnt, 0)) 							AS introducer
+		     
+		     , (IFNULL(B.supPriceMedi, 0)) 					AS supPriceMedi
+		     , (IFNULL(B.supPriceDire, 0)) 					AS supPriceDire
+		     , (IFNULL(B.supPriceEntr, 0)) 					AS supPriceEntr
+		     , (IFNULL(B.supPriceResa, 0)) 					AS supPriceResa
+		     , (IFNULL(B.supPriceFund, 0)) 					AS supPriceFund
+		     
+		     <!-- 상,비상 통합 -->
+		     , (IFNULL(DSPS.cnt, 0)) 									AS disposal						<!-- 중개 성사 -->
+		     , (IFNULL(SPRT.cnt, 0)) 									AS disposalSupporter			<!-- 중개 성사 공동진행 -->
+		     , ROUND((IFNULL(DSPS.prc,0)+IFNULL(SPRT.prc,0))*1000)		AS disposalPrice				<!-- 중개 규모 -->
+		     , ROUND((IFNULL(DSPS.mar,0)+IFNULL(SPRT.mar,0))*1000)		AS disposalMargin				<!-- 중개 매각금액 -->
+		     
+		     <!-- 상장 -->
+		     <!-- , (IFNULL(DSPSL.CNT, 0)) 									AS LISTEDDISPOSAL -->				<!-- 중개 성사 -->
+		     <!-- , (IFNULL(SPRTL.CNT, 0)) 									AS LISTEDDISPOSALSUPPORTER -->		<!-- 중개 성사 공동진행 -->
+		     <!-- , ROUND((IFNULL(DSPSL.PRC,0)+IFNULL(SPRTL.PRC,0))*1000)	AS LISTEDDISPOSALPRICE -->			<!-- 중개 규모 -->
+		     <!-- , ROUND((IFNULL(DSPSL.MAR,0)+IFNULL(SPRTL.MAR,0))*1000)	AS LISTEDDISPOSALMARGIN -->			<!-- 중개 매각금액 -->
+		     
+		     , (IFNULL(DSPSL.myCnt, 0)) 									AS listedDisposal				<!-- 중개 성사(단독) -->
+		     , IFNULL(DSPSL.togeCnt,0)+IFNULL(SPRTL.cnt,0)					AS listedDisposalSupporter		<!-- 중개 성사(공동진행) -->
+		     , ROUND(IFNULL(DSPSL.myPrc,0)*1000)							AS listedDisposalPrice			<!-- 중개 규모(단독) -->
+		     , ROUND((IFNULL(DSPSL.togePrc,0)+IFNULL(SPRTL.prc,0))*1000)	AS listedDisposalTogePrice		<!-- 중개 규모(공동진행) -->
+		     , ROUND(IFNULL(DSPSL.myMar,0)*1000)							AS listedDisposalMargin			<!-- 중개 매각금액(단독) -->
+		     , ROUND((IFNULL(DSPSL.togeMar,0)+IFNULL(SPRTL.mar,0))*1000)	AS listedDisposalTogeMargin		<!-- 중개 매각금액(공동진행) -->
+		     		     
+		     <!-- 비상장 -->
+		     <!-- , (IFNULL(DSPSU.cnt, 0)) 									AS unlistedDisposal -->				<!-- 중개 성사 -->
+		     <!-- , (IFNULL(SPRTU.cnt, 0)) 									AS unlistedDisposalSupporter -->	<!-- 중개 성사 공동진행 -->
+		     <!-- , ROUND((IFNULL(DSPSU.prc,0)+IFNULL(SPRTU.prc,0))*1000)	AS unlistedDisposalPrice -->		<!-- 중개 규모 -->
+		     <!-- , ROUND((IFNULL(DSPSU.mar,0)+IFNULL(SPRTU.mar,0))*1000)	AS unlistedDisposalMargin -->		<!-- 중개 매각금액 -->
+		     
+		     , (IFNULL(DSPSU.myCnt, 0)) 									AS unlistedDisposal				<!-- 중개 성사(단독) -->
+		     , IFNULL(DSPSU.togeCnt,0)+IFNULL(SPRTU.cnt,0)					AS unlistedDisposalSupporter		<!-- 중개 성사(공동진행) -->
+		     , ROUND(IFNULL(DSPSU.myPrc,0)*1000)							AS unlistedDisposalPrice			<!-- 중개 규모(단독) -->
+		     , ROUND((IFNULL(DSPSU.togePrc,0)+IFNULL(SPRTU.prc,0))*1000)	AS unlistedDisposalTogePrice		<!-- 중개 규모(공동진행) -->
+		     , ROUND(IFNULL(DSPSU.myMar,0)*1000)							AS unlistedDisposalMargin			<!-- 중개 매각금액(단독) -->
+		     , ROUND((IFNULL(DSPSU.togeMar,0)+IFNULL(SPRTU.mar,0))*1000)	AS unlistedDisposalTogeMargin		<!-- 중개 매각금액(공동진행) -->
+		     		     
+		     <!-- 프리IPO -->
+		     <!-- , (IFNULL(DSPSI.CNT, 0)) 									AS IPODISPOSAL -->					<!-- 중개 성사 -->
+		     <!-- , (IFNULL(SPRTI.CNT, 0)) 									AS IPODISPOSALSUPPORTER -->			<!-- 중개 성사 공동진행 -->
+		     <!-- , ROUND((IFNULL(DSPSI.PRC,0)+IFNULL(SPRTI.PRC,0))*1000)	AS IPODISPOSALPRICE -->				<!-- 중개 규모 -->
+		     <!-- , ROUND((IFNULL(DSPSI.MAR,0)+IFNULL(SPRTI.MAR,0))*1000)	AS IPODISPOSALMARGIN -->			<!-- 중개 매각금액 -->
+		     
+		     , (IFNULL(DSPSI.myCnt, 0)) 									AS ipoDisposal				<!-- 중개 성사(단독) -->
+		     , IFNULL(DSPSI.togeCnt,0)+IFNULL(SPRTI.cnt,0)					AS ipoDisposalSupporter		<!-- 중개 성사(공동진행) -->
+		     , ROUND(IFNULL(DSPSI.myPrc,0)*1000)							AS ipoDisposalPrice			<!-- 중개 규모(단독) -->
+		     , ROUND((IFNULL(DSPSI.togePrc,0)+IFNULL(SPRTI.prc,0))*1000)	AS ipoDisposalTogePrice		<!-- 중개 규모(공동진행) -->
+		     , ROUND(IFNULL(DSPSI.myMar,0)*1000)							AS ipoDisposalMargin			<!-- 중개 매각금액(단독) -->
+		     , ROUND((IFNULL(DSPSI.togeMar,0)+IFNULL(SPRTI.mar,0))*1000)	AS ipoDisposalTogeMargin		<!-- 중개 매각금액(공동진행) -->
+		     
+		     <!-- 블록딜 -->
+		     <!-- , (IFNULL(DSPSB.CNT, 0)) 									AS BLOCKDISPOSAL -->				<!-- 중개 성사 -->
+		     <!-- , (IFNULL(SPRTB.CNT, 0)) 									AS BLOCKDISPOSALSUPPORTER -->		<!-- 중개 성사 공동진행 -->
+		     <!-- , ROUND((IFNULL(DSPSB.PRC,0)+IFNULL(SPRTB.PRC,0))*1000)	AS BLOCKDISPOSALPRICE -->			<!-- 중개 규모 -->
+		     <!-- , ROUND((IFNULL(DSPSB.MAR,0)+IFNULL(SPRTB.MAR,0))*1000)	AS BLOCKDISPOSALMARGIN -->			<!-- 중개 매각금액 -->
+		     
+		     , (IFNULL(DSPSB.myCnt, 0)) 									AS blockDisposal				<!-- 중개 성사(단독) -->
+		     , IFNULL(DSPSB.togeCnt,0)+IFNULL(SPRTB.cnt,0)					AS blockDisposalSupporter		<!-- 중개 성사(공동진행) -->
+		     , ROUND(IFNULL(DSPSB.myPrc,0)*1000)							AS blockDisposalPrice			<!-- 중개 규모(단독) -->
+		     , ROUND((IFNULL(DSPSB.togePrc,0)+IFNULL(SPRTB.prc,0))*1000)	AS blockDisposalTogePrice		<!-- 중개 규모(공동진행) -->
+		     , ROUND(IFNULL(DSPSB.myMar,0)*1000)							AS blockDisposalMargin			<!-- 중개 매각금액(단독) -->
+		     , ROUND((IFNULL(DSPSB.togeMar,0)+IFNULL(SPRTB.mar,0))*1000)	AS blockDisposalTogeMargin		<!-- 중개 매각금액(공동진행) -->
+		     
+		     
+		     
+		     , (IFNULL(P.supPriceCusJoint, 0)) 				AS supPriceCusJoint
+		     , (IFNULL(P.supPriceCusJointMine, 0)) 			AS supPriceCusJointMine
+		     , (IFNULL(IDEA.CNT, 0)) 						AS ideaCnt
+		     , (IFNULL(IDEA.LV, 0)) 						AS ideaScore
+		     , (IFNULL(IDEARCMD.CNT, 0)) 					AS ideaRcmdCnt
+		     , (IFNULL(IDEARCMD.LV, 0)) 					AS ideaRcmdScore
+		     
+		     <!-- 상,비상 통합 -->
+		     , IFNULL(ACHI.totalAmount, 0)					AS achiTotalAmount							<!-- 투자 규모 -->
+		     , IFNULL(ACHI.directInvest, 0)					AS achiDirectInvest							<!-- 직접 규모 -->
+		     <!-- 상장 -->
+		     , IFNULL(ACHIL.totalAmount, 0)					AS listedInvestPrice						<!-- 투자 규모 -->
+		     , IFNULL(ACHIL.directInvest, 0)				AS listedDirectPrice						<!-- 직접 규모 -->
+		     <!-- 비상장 -->
+		     , IFNULL(ACHIU.totalAmount, 0)					AS unlistedInvestPrice						<!-- 투자 규모 -->
+		     , IFNULL(ACHIU.directInvest, 0)				AS unlistedDirectPrice						<!-- 직접 규모 -->
+		     <!-- 프리IPO -->
+		     , IFNULL(ACHII.totalAmount, 0)					AS ipoInvestPrice							<!-- 투자 규모 -->
+		     , IFNULL(ACHII.directInvest, 0)				AS ipoDirectPrice							<!-- 직접 규모 -->
+		     <!-- 블록딜 -->
+		     , IFNULL(ACHIB.totalAmount, 0)					AS blockInvestPrice							<!-- 투자 규모 -->
+		     , IFNULL(ACHIB.directInvest, 0)				AS blockDirectPrice							<!-- 직접 규모 -->
+		     
+		     
+		     , (CASE WHEN  A.SRT_CD = '10000' OR A.SRT_CD = '201' THEN 'not' else '' END) AS isEmp
+		     
+		     
+		  <!-- A -->
+		  FROM IB_STAFF A
+		  
+		  <!-- B -->
+		  LEFT OUTER JOIN
+		  
+		       (SELECT J1.RG_NM
+		       		 
+		       		 , J4.supPriceMedi
+		       		 , J4.supPriceDire
+		       		 , J4.supPriceEntr
+		       		 , J4.supPriceResa
+		       		 , J4.supPriceFund
+		             , COUNT(CASE WHEN J1.OFFER_CD = '00001' THEN 1 END) meet
+		             , COUNT(CASE WHEN J1.OFFER_CD = '00002' THEN 1 END) ir
+		             , COUNT(CASE WHEN J1.OFFER_CD = '00003' or J1.OFFER_CD = '00002' THEN 1 END) invite
+		             , COUNT(CASE WHEN J1.OFFER_CD = '00004' THEN 1 END) anner
+		             , COUNT(CASE WHEN J1.OFFER_CD = '00005' THEN 1 END) proposal
+		             , COUNT(CASE WHEN J1.OFFER_CD = '00008' THEN 1 END) nightMeet
+		             
+		             , COUNT(CASE WHEN J1.OFFER_CD = '00013' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' THEN 1 END) recommend
+		             , COUNT(CASE WHEN J1.CATEGORY_CD = '00008' THEN 1 END) mna
+		             
+		             <!-- 소싱 건수(프리IPO) -->
+		             , COUNT(CASE WHEN J1.CATEGORY_CD = '00012' THEN 1 END) ipo
+		             <!-- 소싱 건수(블록딜) -->
+		             , COUNT(CASE WHEN J1.CATEGORY_CD IN ('00004','00005','00006','00007') THEN 1 END) block
+		             
+		             , COUNT(CASE WHEN J1.CATEGORY_CD = '00013' THEN 1 END) spac
+		             
+		             <!-- 소싱 규모(프리IPO) -->
+		             , SUM(CASE WHEN J1.CATEGORY_CD = '00012' THEN (CASE WHEN J1.INVEST_PRICE &gt; 1000000 THEN J1.INVEST_PRICE/100000000 ELSE J1.INVEST_PRICE END) END) ipoPrice
+		             <!-- 소싱 규모(블록딜) -->
+		             , SUM(CASE WHEN J1.CATEGORY_CD IN ('00004','00005','00006','00007') THEN (CASE WHEN J1.INVEST_PRICE &gt; 1000000 THEN J1.INVEST_PRICE/100000000 ELSE J1.INVEST_PRICE END) END) blockPrice
+		             
+		             
+		             , COUNT(CASE WHEN J1.CATEGORY_CD = '00008' and J1.PROGRESS_CD = '00006' THEN 1 END) mnaGood
+		             
+		             <!-- 투자 건수(프리IPO) -->
+		             , COUNT(CASE WHEN J1.CATEGORY_CD = '00012' and J1.PROGRESS_CD = '00003' THEN 1 END) ipoGood
+		             <!-- 투자 건수(블록딜) -->
+		             , COUNT(CASE WHEN J1.CATEGORY_CD IN ('00004','00005','00006','00007') AND J1.PROGRESS_CD = '00003' THEN 1 END) blockInvestCnt
+		             
+		             <!-- 투자 규모(프리IPO) -->
+		             , SUM(CASE WHEN J1.CATEGORY_CD = '00012' and J1.PROGRESS_CD = '00003' THEN (CASE WHEN J1.INVEST_PRICE &gt; 1000000 THEN J1.INVEST_PRICE/100000000 ELSE J1.INVEST_PRICE END) END) ipoInvestPrice
+		             <!-- 투자 규모(블록딜) -->
+		             , SUM(CASE WHEN J1.CATEGORY_CD IN ('00004','00005','00006','00007') AND J1.PROGRESS_CD = '00003' THEN (CASE WHEN J1.INVEST_PRICE &gt; 1000000 THEN J1.INVEST_PRICE/100000000 ELSE J1.INVEST_PRICE END) END) blockInvestPrice
+		             
+		             
+		             , COUNT(CASE WHEN J1.CATEGORY_CD = '00013' and J1.PROGRESS_CD = '00003' THEN 1 END) spacGood
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00071' AND J1.OFFER_CD = '00014' THEN 1 END) memberCpnCast
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00071' AND J1.OFFER_CD = '00015' THEN 1 END) memberCpnIntroduce
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00072' AND J1.OFFER_CD = '00014' THEN 1 END) shareholderCpnCast
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00072' AND J1.OFFER_CD = '00015' THEN 1 END) shareholderCpnIntroduce
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00071' AND J1.OFFER_CD = '00014' and J1.PROGRESS_CD = '00003' THEN 1 END) memberCpnCastGood
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00071' AND J1.OFFER_CD = '00015' and J1.PROGRESS_CD = '00003' THEN 1 END) memberCpnIntroduceGood
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00072' AND J1.OFFER_CD = '00014' and J1.PROGRESS_CD = '00003' THEN 1 END) shareholderCpnCastGood
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00072' AND J1.OFFER_CD = '00015' and J1.PROGRESS_CD = '00003' THEN 1 END) shareholderCpnIntroduceGood
+		             
+		             
+		             <!-- 소싱 건수 -->
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00001' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' THEN 1 END) mediateDeal
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00002' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' THEN 1 END) directDeal
+		             <!-- 소싱 건수(상장) -->
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD IN ('00001', '00002') AND J1.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012') AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) &gt; 0 THEN TRUE ELSE FALSE END) THEN 1 END)	AS listedDealCnt
+		             <!-- 소싱 건수(비상장) -->
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD IN ('00001', '00002') AND J1.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012') AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) = 0 AND C1.CPN_ID NOT LIKE 'A%' THEN TRUE ELSE FALSE END) THEN 1 END) unlistedDealCnt
+		             
+		             <!-- 소싱 규모 -->
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00001' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' AND J1.INVEST_PRICE REGEXP "[0-9]" THEN (case when replace(J1.INVEST_PRICE,',','')>100000 then replace(J1.INVEST_PRICE,',','')/100000000 else J1.INVEST_PRICE end) END) mediateDealprice
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00002' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' AND J1.INVEST_PRICE REGEXP "[0-9]" THEN (case when replace(J1.INVEST_PRICE,',','')>100000 then replace(J1.INVEST_PRICE,',','')/100000000 else J1.INVEST_PRICE end) END) directDealprice
+		             <!-- 소싱 규모(상장) -->
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD IN ('00001','00002') AND J1.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012') AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) &gt; 0 THEN TRUE ELSE FALSE END) THEN (CASE WHEN J1.INVEST_PRICE &gt; 1000000 THEN J1.INVEST_PRICE/100000000 ELSE J1.INVEST_PRICE END) END)	AS listedDealPrice
+		             <!-- 소싱 규모(비상장) -->
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD IN ('00001','00002') AND J1.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012') AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) = 0 AND C1.CPN_ID NOT LIKE 'A%' THEN TRUE ELSE FALSE END) THEN (CASE WHEN J1.INVEST_PRICE &gt; 1000000 THEN J1.INVEST_PRICE/100000000 ELSE J1.INVEST_PRICE END) END)	AS unlistedDealPrice
+		             
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00001' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' AND J1.PROGRESS_CD = '00003' AND J1.INVEST_PRICE REGEXP "[0-9]" AND IFNULL(JJ1.OFFER_SNB, 0) = 0 THEN (case when replace(J1.INVEST_PRICE,',','')>100000 then replace(J1.INVEST_PRICE,',','')/100000000 else J1.INVEST_PRICE end) END) mediateDealpriceGood
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00002' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' AND J1.PROGRESS_CD = '00003' AND J1.INVEST_PRICE REGEXP "[0-9]" AND IFNULL(JJ1.OFFER_SNB, 0) = 0 THEN (case when replace(J1.INVEST_PRICE,',','')>100000 then replace(J1.INVEST_PRICE,',','')/100000000 else J1.INVEST_PRICE end) END) directDealpriceGood
+		             <!-- 투자 건수 -->
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00001' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' and J1.PROGRESS_CD = '00003' THEN 1 END) dealRgood
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD = '00002' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' and J1.PROGRESS_CD = '00003' THEN 1 END) dealSgood
+		             <!-- 투자 건수 단독(상장) -->
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD IN ('00001','00002') 
+		             					AND J1.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+		             					AND J1.PROGRESS_CD = '00003'
+		             					AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) &gt; 0 
+		             			  				  THEN TRUE 
+		             			  				  ELSE FALSE END)
+		             		  			AND IFNULL((SELECT FALSE FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = J1.S_NB LIMIT 1), TRUE)
+		             		  	  THEN 1 END) listedInvestMyCnt
+		             <!-- 투자 건수 (내가main)공동진행(상장) -->
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD IN ('00001','00002') 
+		             					AND J1.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+		             					AND J1.PROGRESS_CD = '00003'
+		             					AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) &gt; 0 
+		             			  				  THEN TRUE 
+		             			  				  ELSE FALSE END)
+		             		  			AND IFNULL((SELECT TRUE FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = J1.S_NB LIMIT 1), FALSE)
+		             		  	  THEN 1 END) listedInvestMyTogeCnt
+		             		  	   
+		             <!-- 투자 건수 (내가sub)공동진행 (상장) -->
+		             , (SELECT COUNT(1)
+		             	  FROM IB_OFFER LA
+		             	  LEFT JOIN IB_COMPANY C1	ON LA.CPN_ID = C1.CPN_ID
+		             	  LEFT JOIN (SELECT A.OFFER_SNB AS OFFER_SNB
+            				 				,GROUP_CONCAT(B.USR_NM SEPARATOR ',') AS USR_NM
+            			 			   FROM IB_JOINT_PROGRESS	A
+            			 			   LEFT JOIN IB_STAFF		B ON B.S_NB = A.STAFF_SNB
+            			 			  GROUP BY OFFER_SNB) JJ2 ON JJ2.OFFER_SNB = LA.S_NB
+            			 WHERE 1=1
+            			   AND LA.TM_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+            			   AND LA.MIDDLE_OFFER_CD IN ('00001','00002') 
+		             	   AND LA.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+		             	   AND LA.PROGRESS_CD = '00003'
+		             	   AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) &gt; 0 
+		             			  				  THEN TRUE 
+		             			  				  ELSE FALSE END)
+            			   AND INSTR(JJ2.USR_NM, J1.RG_NM) > 0
+            			 	) listedInvestTogeCnt
+		             
+		            <!-- 투자 건수 단독(비상장) -->
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD IN ('00001','00002') 
+		             					AND J1.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+		             					AND J1.PROGRESS_CD = '00003'
+		             					AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) = 0 AND C1.CPN_ID NOT LIKE 'A%' THEN TRUE ELSE FALSE END)
+		             		  			AND IFNULL((SELECT FALSE FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = J1.S_NB LIMIT 1), TRUE)
+		             		  	  THEN 1 END) unlistedInvestMyCnt
+		             <!-- 투자 건수 (내가main)공동진행(비상장) -->
+		             , COUNT(CASE WHEN J1.MIDDLE_OFFER_CD IN ('00001','00002') 
+		             					AND J1.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+		             					AND J1.PROGRESS_CD = '00003'
+		             					AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) = 0 AND C1.CPN_ID NOT LIKE 'A%' THEN TRUE ELSE FALSE END)
+		             		  			AND IFNULL((SELECT TRUE FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = J1.S_NB LIMIT 1), FALSE)
+		             		  	  THEN 1 END) unlistedInvestMyTogeCnt
+		             		  	   
+		             <!-- 투자 건수 (내가sub)공동진행 (비상장) -->
+		             , (SELECT COUNT(1)
+		             	  FROM IB_OFFER LA
+		             	  LEFT JOIN IB_COMPANY C1	ON LA.CPN_ID = C1.CPN_ID
+		             	  LEFT JOIN (SELECT A.OFFER_SNB AS OFFER_SNB
+            				 				,GROUP_CONCAT(B.USR_NM SEPARATOR ',') AS USR_NM
+            			 			   FROM IB_JOINT_PROGRESS	A
+            			 			   LEFT JOIN IB_STAFF		B ON B.S_NB = A.STAFF_SNB
+            			 			  GROUP BY OFFER_SNB) JJ2 ON JJ2.OFFER_SNB = LA.S_NB
+            			 WHERE 1=1
+            			   AND LA.TM_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+            			   AND LA.MIDDLE_OFFER_CD IN ('00001','00002') 
+		             	   AND LA.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+		             	   AND LA.PROGRESS_CD = '00003'
+		             	   AND (CASE WHEN LENGTH(TRIM(IFNULL(C1.A_CPN_ID,''))) = 0 AND C1.CPN_ID NOT LIKE 'A%' THEN TRUE ELSE FALSE END)
+            			   AND INSTR(JJ2.USR_NM, J1.RG_NM) > 0
+            			 	) unlistedInvestTogeCnt
+            			 	
+            		 <!-- 투자 건수 단독(프리IPO) -->
+		             , COUNT(CASE WHEN J1.CATEGORY_CD = '00012'
+		             					AND J1.PROGRESS_CD = '00003'
+		             					AND IFNULL((SELECT FALSE FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = J1.S_NB LIMIT 1), TRUE)
+		             		  	  THEN 1 END) ipoInvestMyCnt
+		             <!-- 투자 건수 (내가main)공동진행(프리IPO) -->
+		             , COUNT(CASE WHEN J1.CATEGORY_CD = '00012'
+		             					AND J1.PROGRESS_CD = '00003'
+		             					AND IFNULL((SELECT TRUE FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = J1.S_NB LIMIT 1), FALSE)
+		             		  	  THEN 1 END) ipoInvestMyTogeCnt
+		             		  	   
+		             <!-- 투자 건수 (내가sub)공동진행 (프리IPO) -->
+		             , (SELECT COUNT(1)
+		             	  FROM IB_OFFER LA
+		             	  LEFT JOIN IB_COMPANY C1	ON LA.CPN_ID = C1.CPN_ID
+		             	  LEFT JOIN (SELECT A.OFFER_SNB AS OFFER_SNB
+            				 				,GROUP_CONCAT(B.USR_NM SEPARATOR ',') AS USR_NM
+            			 			   FROM IB_JOINT_PROGRESS	A
+            			 			   LEFT JOIN IB_STAFF		B ON B.S_NB = A.STAFF_SNB
+            			 			  GROUP BY OFFER_SNB) JJ2 ON JJ2.OFFER_SNB = LA.S_NB
+            			 WHERE 1=1
+            			   AND LA.TM_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+            			   AND LA.CATEGORY_CD = '00012'
+		             	   AND LA.PROGRESS_CD = '00003'
+		             	   AND INSTR(JJ2.USR_NM, J1.RG_NM) > 0
+            			 	) ipoInvestTogeCnt
+            			 	
+            		 <!-- 투자 건수 단독(블록딜) -->
+		             , COUNT(CASE WHEN J1.CATEGORY_CD IN ('00004','00005','00006','00007')
+		             					AND J1.PROGRESS_CD = '00003'
+		             					AND IFNULL((SELECT FALSE FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = J1.S_NB LIMIT 1), TRUE)
+		             		  	  THEN 1 END) blockInvestMyCnt
+		             <!-- 투자 건수 (내가main)공동진행(블록딜) -->
+		             , COUNT(CASE WHEN J1.CATEGORY_CD IN ('00004','00005','00006','00007')
+		             					AND J1.PROGRESS_CD = '00003'
+		             					AND IFNULL((SELECT TRUE FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = J1.S_NB LIMIT 1), FALSE)
+		             		  	  THEN 1 END) blockInvestMyTogeCnt
+		             		  	   
+		             <!-- 투자 건수 (내가sub)공동진행 (블록딜) -->
+		             , (SELECT COUNT(1)
+		             	  FROM IB_OFFER LA
+		             	  LEFT JOIN IB_COMPANY C1	ON LA.CPN_ID = C1.CPN_ID
+		             	  LEFT JOIN (SELECT A.OFFER_SNB AS OFFER_SNB
+            				 				,GROUP_CONCAT(B.USR_NM SEPARATOR ',') AS USR_NM
+            			 			   FROM IB_JOINT_PROGRESS	A
+            			 			   LEFT JOIN IB_STAFF		B ON B.S_NB = A.STAFF_SNB
+            			 			  GROUP BY OFFER_SNB) JJ2 ON JJ2.OFFER_SNB = LA.S_NB
+            			 WHERE 1=1
+            			   AND LA.TM_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+            			   AND LA.CATEGORY_CD IN ('00004','00005','00006','00007')
+		             	   AND LA.PROGRESS_CD = '00003'
+		             	   AND INSTR(JJ2.USR_NM, J1.RG_NM) > 0
+            			 	) blockInvestTogeCnt
+            			 	
+		            
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00001' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' AND J1.PROGRESS_CD = '00003' AND J1.INVEST_PRICE REGEXP "[0-9]" AND IFNULL(JJ1.OFFER_SNB, 0) != 0 THEN ((case when replace(J1.INVEST_PRICE,',','')>100000 then replace(J1.INVEST_PRICE,',','')/100000000 else J1.INVEST_PRICE end)-iod.prc)*(1-(JJ1.RATIO/100)) END) jointMediateDealpriceGood
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00002' AND J1.CATEGORY_CD != '00013' AND J1.CATEGORY_CD !='00012' AND J1.CATEGORY_CD !='00008' AND J1.PROGRESS_CD = '00003' AND J1.INVEST_PRICE REGEXP "[0-9]" AND IFNULL(JJ1.OFFER_SNB, 0) != 0 THEN ((case when replace(J1.INVEST_PRICE,',','')>100000 then replace(J1.INVEST_PRICE,',','')/100000000 else J1.INVEST_PRICE end)-iod.prc)*(1-(JJ1.RATIO/100)) END) jointDirectDealpriceGood
+		            
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00012' AND J1.PROGRESS_CD = '00003' AND J1.PRICE REGEXP "[0-9]" AND IFNULL(JJ1.OFFER_SNB, 0) != 0 THEN (J1.PRICE+0)*(1-(JJ1.RATIO/100)) END) jointResaleDealpriceGood
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00013' AND J1.PROGRESS_CD = '00003' AND J1.PRICE REGEXP "[0-9]" AND IFNULL(JJ1.OFFER_SNB, 0) != 0 THEN (J1.PRICE+0)*(1-(JJ1.RATIO/100)) END) jointFundDealpriceGood
+		            
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00011' AND J1.PROGRESS_CD = '00003' THEN (case when replace(j1.price,',','')>10000 then replace(j1.price,',','')/100000000 else j1.price end) END) entrustGood
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00012' AND J1.PROGRESS_CD = '00003' AND IFNULL(JJ1.OFFER_SNB, 0) = 0 THEN (case when replace(j1.price,',','')>100000 then replace(j1.price,',','')/100000000 else j1.price end) END) reSaleGood
+		             , SUM(CASE WHEN J1.MIDDLE_OFFER_CD = '00013' AND J1.PROGRESS_CD = '00003' AND IFNULL(JJ1.OFFER_SNB, 0) = 0 THEN (case when replace(j1.price,',','')>100000 then replace(j1.price,',','')/100000000 else j1.price end) END) fundGood
+		             		             
+		             , COUNT(JJ2.CNT)		as financing
+		
+		
+				  <!-- B-J1 -->
+		          FROM IB_OFFER J1
+		          
+		          <!-- B-C1 -->
+		          LEFT JOIN IB_COMPANY C1	ON J1.CPN_ID = C1.CPN_ID		<!-- 해당 회사 -->
+		          
+		          <!-- B-C2 -->
+		          LEFT JOIN IB_CUSTOMER C2	ON J1.CST_ID = C2.S_NB			<!-- 해당 고객의  -->
+		          <!-- B-C21 -->
+		          LEFT JOIN IB_COMPANY C21	ON C2.CPN_ID = C21.CPN_ID		<!-- 해당 고객의 회사 -->
+		          
+		          LEFT OUTER JOIN (SELECT OFFER_SNB, sum(RATIO) as ratio FROM IB_JOINT_PROGRESS GROUP BY OFFER_SNB) JJ1 ON JJ1.OFFER_SNB = J1.S_NB
+		          LEFT OUTER JOIN (SELECT OFFER_SNB, COUNT(1) CNT FROM IB_OFFER_INFO WHERE COMMENT IS NOT NULL AND COMMENT != '' GROUP BY OFFER_SNB) JJ2 ON JJ2.OFFER_SNB = J1.S_NB
+				  LEFT OUTER JOIN (SELECT A.OFFER_SNB
+										, SUM(A.PRICE) prc 
+									FROM IB_OFFER_DISPOSAL A
+									GROUP BY A.OFFER_SNB) iod on iod.OFFER_SNB = J1.S_NB
+				  <!-- B-J4 -->
+		          LEFT OUTER JOIN (SELECT C.USR_NM
+										
+										,  SUM(CASE WHEN MIDDLE_OFFER_CD = '00001' AND B.CATEGORY_CD != '00013' THEN ((B.INVEST_PRICE-IOD2.PRC) * A.RATIO)/100 END) supPriceMedi
+										,  SUM(CASE WHEN MIDDLE_OFFER_CD = '00002' AND B.CATEGORY_CD != '00013' THEN ((B.INVEST_PRICE-IOD2.PRC) * A.RATIO)/100 END) supPriceDire
+										<!-- ,  SUM(CASE WHEN MIDDLE_OFFER_CD IN ('00001',00002') AND B.CATEGORY_CD NOT IN ('00013','000012') THEN ((B.INVEST_PRICE-IOD2.PRC) * A.RATIO)/100 END) supPriceDire -->
+										,  SUM(CASE WHEN MIDDLE_OFFER_CD = '00011' THEN ((B.PRICE-IOD2.PRC) * A.RATIO)/100 END) supPriceEntr
+										,  SUM(CASE WHEN MIDDLE_OFFER_CD = '00012' THEN ((B.PRICE-IOD2.PRC) * A.RATIO)/100 END) supPriceResa
+										,  SUM(CASE WHEN MIDDLE_OFFER_CD = '00013' THEN ((B.PRICE-IOD2.PRC) * A.RATIO)/100 END) supPriceFund
+										FROM IB_JOINT_PROGRESS A
+										LEFT JOIN IB_OFFER B ON A.OFFER_SNB = B.S_NB										
+										LEFT JOIN IB_STAFF C ON A.STAFF_SNB = C.S_NB
+										LEFT JOIN IB_COMPANY D ON B.CPN_ID = D.CPN_ID		<!-- 해당 회사 -->
+										LEFT OUTER JOIN (SELECT A.OFFER_SNB
+																, SUM(A.PRICE) PRC 
+														   FROM IB_OFFER_DISPOSAL A
+														  GROUP BY A.OFFER_SNB) IOD2 ON IOD2.OFFER_SNB = B.S_NB
+										WHERE PROGRESS_CD = '00003'
+										  AND B.TM_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+										GROUP BY USR_NM) J4 ON J1.RG_NM = J4.USR_NM		
+		
+		         WHERE J1.TM_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+		         GROUP BY J1.RG_NM
+		        ) B
+		    ON A.USR_NM = B.RG_NM
+		  
+		  
+		  <!-- OMMC -->  
+		  LEFT OUTER JOIN (SELECT RG_ID, OFFER_SNB, COUNT(1) CNT 
+							 FROM IB_OFFER_MNA_MATCH_CPN
+						    WHERE RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959') 
+							GROUP BY RG_ID) OMMC ON OMMC.RG_ID = A.USR_ID
+		 		  
+		  <!-- D -->
+		  LEFT OUTER JOIN
+		       (SELECT B.CST_NM
+		             , COUNT(B.CST_NM) infoProvider
+		             , A.INFO_PROVIDER infoProviderCd
+		          FROM IB_OFFER A
+		          LEFT JOIN IB_CUSTOMER B ON A.INFO_PROVIDER = B.S_NB
+		         WHERE TM_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+		           AND OFFER_CD BETWEEN '00001' AND '00008'
+		         GROUP BY B.CST_NM
+		       ) D
+		    ON A.USR_NM = D.CST_NM
+		    
+		  <!-- E -->
+		  LEFT OUTER JOIN
+		       (SELECT
+					   a.RG_ID
+		             , COUNT(a.RG_ID) opinion
+		          FROM IB_RECOMMEND_OPINION a
+				left outer join ib_offer ljof on ljof.s_nb = a.offer_snb
+		         WHERE a.RG_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+		         GROUP BY a.RG_ID
+		       ) E
+		    ON A.USR_ID = E.RG_ID
+		  
+		  <!-- F -->
+		  LEFT OUTER JOIN
+		       (
+		       
+		        SELECT CusInviteNm, CusInviteSabun, SUM(ISICBond) cusRealMoney, SUM(ISICBond2) cusReSaleMoney, SUM(JointTotal) cusRealJointTotal, SUM(JointMine) cusRealJointMine FROM (
+					SELECT OutInvitePerNm CusInviteNm, OutInvitePerSabun CusInviteSabun, CusStatus, CusStatusNm, CusStatusOrder,
+						CASE WHEN CusStatus != '4' THEN ROUND((SUM(RealISICBond) * 0.00000001), 1) END ISICBond,
+						CASE WHEN CusStatus = '4' THEN ROUND((SUM(RealISICBond) * 0.00000001), 1) END ISICBond2,
+						CASE WHEN CusStatus != '4' AND IFNULL(OutInviteRate,0) != 100 THEN ROUND((SUM(ISICBond) * 0.00000001), 1) ELSE 0 END JointTotal,
+						ROUND((SUM(ISICBond) * 0.00000001), 1) - ROUND((SUM(RealISICBond) * 0.00000001), 1) JointMine FROM
+						(SELECT InSuCd, SUM(ISICBond) ISICBond, SUM(ISICBond) * OutInviteRate / 100 RealISICBond, CusInviteSabun, CusInviteNm, CusStatus, CusStatusNm, CusStatusOrder,
+							OutInvitePerSabun, OutInvitePerNm, OutInviteRate, OutInviteReason FROM
+							(SELECT CusCd, CusInviteSabun, CusInviteNm, CASE WHEN CusStatus IN ('2', '8') THEN '2' ELSE CusStatus END CusStatus,
+								CASE WHEN CusStatus IN ('2', '8') THEN '일임' ELSE CusStatusNm END CusStatusNm, CASE WHEN CusStatus IN ('2', '8') THEN '1' ELSE CusStatusOrder END CusStatusOrder 
+							FROM CS_Cus_Info WHERE DelFlag = 'N' AND CusStatus IN ('2', '4', '6', '8')) a
+							LEFT OUTER JOIN
+							(SELECT CusCd, CusInviteSabun OutInvitePerSabun, CusInviteNm OutInvitePerNm, 100 - (SELECT IFNULL(SUM(InviteRate), 0) 
+								FROM CS_Cus_Invite WHERE CusCd = k.CusCd AND DelFlag = 'N' AND InviteRate != 'X') OutInviteRate, '' OutInviteReason
+							FROM CS_Cus_Info k WHERE DelFlag ='N'
+							UNION ALL
+							SELECT CusCd, a.PerSabun OutInvitePerSabun, PerNm OutInvitePerNm, InviteRate OutInviteRate, InviteReason OutInviteReason
+								FROM CS_Cus_Invite a, erp.ERP_Per b WHERE a.PerSabun = b.PerSabun AND a.DelFlag = 'N') b
+							ON a.CusCd = b.CusCd
+							LEFT OUTER JOIN
+							(SELECT CusCd, a.InSuCd, ISICBond FROM CS_Invest_Summary a, CS_Invest_Summary_InCus b
+								WHERE a.InSuCd = b.InSuCd AND b.DelFlag = 'N'
+							AND InSuNabDay BETWEEN CONCAT(#choice_year#,'-', #choice_monthS#,'-01') AND CONCAT(#choice_year#,'-', #choice_month#, '-31')
+							AND ISICInMoneyDate BETWEEN CONCAT(#choice_year#,'-', #choice_monthS#,'-01') AND CONCAT(#choice_year#,'-', #choice_month#, '-31')) c
+							ON a.CusCd = c.CusCd
+							WHERE InSuCd IS NOT NULL
+						GROUP BY InSuCd, CusInviteSabun, CusInviteNm, CusStatus, CusStatusNm, CusStatusOrder,
+						OutInvitePerSabun, OutInvitePerNm, OutInviteRate, OutInviteReason) d
+					GROUP BY CusStatus, CusStatusNm, CusStatusOrder, OutInvitePerSabun, OutInvitePerNm, OutInviteRate
+				) e
+				GROUP BY CusInviteNm
+				
+		       ) F
+		    ON A.USR_NM = F.CusInviteNm
+		
+		  <!-- N1 -->
+		  LEFT OUTER JOIN
+		    (SELECT RG_ID
+		          , COUNT(1) CNT
+		       FROM IB_NET_POINT
+		       WHERE RG_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+		   	  GROUP BY RG_ID
+		    ) N1
+			ON A.USR_ID = N1.RG_ID
+			
+		  <!-- N2 -->
+		  LEFT OUTER JOIN
+		    (SELECT RG_ID
+		          , COUNT(1) CNT
+		       FROM IB_CST_DEAL_INFO
+		       WHERE RG_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+		      GROUP BY RG_ID
+		    ) N2 ON A.USR_ID = N2.RG_ID
+		    
+		  <!-- O -->
+		  LEFT OUTER JOIN
+		    (select itdu.rg_snb, COUNT(1) CNT
+			from(SELECT
+					RG_SNB
+		       FROM IB_INTRODUCER
+		       WHERE tm_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+			   group by tm_dt, STAFF_SNB, CST_ID
+			   ) itdu
+		      GROUP BY itdu.RG_SNB
+		    ) O ON A.CUS_ID = O.RG_SNB
+		    
+		  <!-- P -->
+		  LEFT OUTER JOIN
+		    (SELECT USR_NM
+				  , (ISICBond * 0.00000001) as supPriceCusJoint
+				  , (ISICBond * 0.00000001) * InViteRate/100 as supPriceCusJointMine
+			   FROM CS_Cus_Invite A
+		  LEFT JOIN CS_Invest_Summary_InCus B ON A.CusCd = B.CusCd
+		  
+		  LEFT JOIN IB_STAFF c ON a.PerSabun = c.SABUN
+			  WHERE A.RegDate between CONCAT (#choice_year#, #choice_monthS#,'01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+			  GROUP BY A.PerSabun
+		    ) P ON A.USR_NM = P.USR_NM
+		  
+		  <!-- IDEA -->
+		  LEFT JOIN (SELECT rg_id, count(1) CNT, SUM(score) LV FROM  IB_IDEA_OFFER
+						WHERE RG_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+						GROUP BY RG_ID
+			) IDEA ON A.USR_ID = IDEA.RG_ID
+			
+		  <!-- IDEARCMD -->
+		  LEFT JOIN (SELECT RG_ID, COUNT(1) CNT, SUM(LV_CD) LV FROM IB_IDEA_OFFER_RCMD
+						WHERE RG_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+						GROUP BY RG_ID
+			) IDEARCMD ON A.USR_ID = IDEARCMD.RG_ID
+			
+			
+		  <!-- DSPS -->
+		  LEFT JOIN (SELECT A.STAFF_SNB
+						   ,SUM(A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100) prc
+						   ,SUM(A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100) mar
+						   ,COUNT(1) cnt											<!-- 중개 성사 -->
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT OFFER_SNB, SUM(RATIO) RATIO FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2' GROUP BY OFFER_SNB) IJP ON IJP.OFFER_SNB = A.S_NB
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+					  GROUP BY A.STAFF_SNB
+			) DSPS ON DSPS.STAFF_SNB = A.S_NB	
+			
+		  <!-- SPRT -->
+		  LEFT JOIN (SELECT IJP.STAFF_SNB
+		  				   ,SUM(A.PRICE * IJP.RATIO /100) prc 
+		  				   ,SUM(A.MARGIN * IJP.RATIO /100) mar 
+		  				   ,COUNT(1) cnt											<!-- 중개 성사 공동진행 -->
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT * FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2') IJP ON IJP.OFFER_SNB = A.S_NB
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+					  GROUP BY IJP.STAFF_SNB
+			) SPRT ON SPRT.STAFF_SNB = A.S_NB
+		
+		  <!-- DSPSL -->
+		  LEFT JOIN (SELECT A.STAFF_SNB
+						   ,SUM(A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100) prc
+						   ,SUM(A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100) mar
+						   ,COUNT(1) cnt											<!-- 중개 성사(내가main인건)(상장) -->
+						   <!-- 단독 -->
+						   ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1) * (A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100)) myPrc
+					       ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1) * (A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100)) myMar
+					       ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1)) myCnt
+					       <!-- 공동 -->
+					       ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0) * (A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100)) togePrc
+					       ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0) * (A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100)) togeMar
+						   ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0)) togeCnt
+						   
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT OFFER_SNB, SUM(RATIO) RATIO FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2' GROUP BY OFFER_SNB) IJP ON IJP.OFFER_SNB = A.S_NB
+					   LEFT JOIN IB_OFFER			OF ON A.OFFER_SNB = OF.S_NB
+					   LEFT JOIN IB_COMPANY			C  ON C.CPN_ID = OF.CPN_ID
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+					    AND LENGTH(TRIM(IFNULL(C.A_CPN_ID,''))) &gt; 0
+					    AND OF.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+					  GROUP BY A.STAFF_SNB
+			) DSPSL ON DSPSL.STAFF_SNB = A.S_NB	
+		  
+		  <!-- SPRTL -->
+		  LEFT JOIN (SELECT IJP.STAFF_SNB
+		  				   ,SUM(A.PRICE * IJP.RATIO /100) prc 
+		  				   ,SUM(A.MARGIN * IJP.RATIO /100) mar 
+		  				   ,COUNT(1) cnt											<!-- 중개 성사(내가sub인건)공동진행(상장) -->
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT * FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2') IJP ON IJP.OFFER_SNB = A.S_NB
+					   LEFT JOIN IB_OFFER			OF ON A.OFFER_SNB = OF.S_NB
+					   LEFT JOIN IB_COMPANY			C  ON C.CPN_ID = OF.CPN_ID
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+					    AND LENGTH(TRIM(IFNULL(C.A_CPN_ID,''))) &gt; 0
+					    AND OF.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+					  GROUP BY IJP.STAFF_SNB
+			) SPRTL ON SPRTL.STAFF_SNB = A.S_NB
+		  
+		  <!-- DSPSU -->
+		  LEFT JOIN (SELECT A.STAFF_SNB
+						   ,SUM(A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100) prc
+						   ,SUM(A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100) mar
+						   ,COUNT(1) cnt											<!-- 중개 성사(비상장) -->
+						   <!-- 단독 -->
+						   ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1) * (A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100)) myPrc
+					       ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1) * (A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100)) myMar
+					       ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1)) myCnt
+					       <!-- 공동 -->
+					       ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0) * (A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100)) togePrc
+					       ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0) * (A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100)) togeMar
+						   ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0)) togeCnt
+						   
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT OFFER_SNB, SUM(RATIO) RATIO FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2' GROUP BY OFFER_SNB) IJP ON IJP.OFFER_SNB = A.S_NB
+					   LEFT JOIN IB_OFFER			OF ON A.OFFER_SNB = OF.S_NB
+					   LEFT JOIN IB_COMPANY			C  ON C.CPN_ID = OF.CPN_ID
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+					    AND (CASE WHEN LENGTH(TRIM(IFNULL(C.A_CPN_ID,''))) &gt; 0 THEN FALSE ELSE TRUE END)
+					    AND OF.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+					  GROUP BY A.STAFF_SNB
+			) DSPSU ON DSPSU.STAFF_SNB = A.S_NB	
+		  
+		  <!-- SPRTU -->
+		  LEFT JOIN (SELECT IJP.STAFF_SNB
+		  				   ,SUM(A.PRICE * IJP.RATIO /100) prc 
+		  				   ,SUM(A.MARGIN * IJP.RATIO /100) mar 
+		  				   ,COUNT(1) cnt											<!-- 중개 성사 공동진행(비상장) -->
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT * FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2') IJP ON IJP.OFFER_SNB = A.S_NB
+					   LEFT JOIN IB_OFFER			OF ON A.OFFER_SNB = OF.S_NB
+					   LEFT JOIN IB_COMPANY			C  ON C.CPN_ID = OF.CPN_ID
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+					    AND (CASE WHEN LENGTH(TRIM(IFNULL(C.A_CPN_ID,''))) &gt; 0 THEN FALSE ELSE TRUE END)
+					    AND OF.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+					  GROUP BY IJP.STAFF_SNB
+			) SPRTU ON SPRTU.STAFF_SNB = A.S_NB
+		  
+		  <!-- DSPSI -->
+		  LEFT JOIN (SELECT A.STAFF_SNB
+						   ,SUM(A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100) prc
+						   ,SUM(A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100) mar
+						   ,COUNT(1) cnt											<!-- 중개 성사(프리IPO) -->
+						   <!-- 단독 -->
+						   ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1) * (A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100)) myPrc
+					       ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1) * (A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100)) myMar
+					       ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1)) myCnt
+					       <!-- 공동 -->
+					       ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0) * (A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100)) togePrc
+					       ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0) * (A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100)) togeMar
+						   ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0)) togeCnt
+						   
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT OFFER_SNB, SUM(RATIO) RATIO FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2' GROUP BY OFFER_SNB) IJP ON IJP.OFFER_SNB = A.S_NB
+					   LEFT JOIN IB_OFFER			OF ON A.OFFER_SNB = OF.S_NB
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+					    AND OF.CATEGORY_CD = '00012'
+					  GROUP BY A.STAFF_SNB
+			) DSPSI ON DSPSI.STAFF_SNB = A.S_NB	
+		  
+		  <!-- SPRTI -->
+		  LEFT JOIN (SELECT IJP.STAFF_SNB
+		  				   ,SUM(A.PRICE * IJP.RATIO /100) prc 
+		  				   ,SUM(A.MARGIN * IJP.RATIO /100) mar 
+		  				   ,COUNT(1) cnt											<!-- 중개 성사 공동진행(프리IPO) -->
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT * FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2') IJP ON IJP.OFFER_SNB = A.S_NB
+					   LEFT JOIN IB_OFFER			OF ON A.OFFER_SNB = OF.S_NB
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+					    AND OF.CATEGORY_CD = '00012'
+					  GROUP BY IJP.STAFF_SNB
+			) SPRTI ON SPRTI.STAFF_SNB = A.S_NB
+		  
+		  <!-- DSPSB -->
+		  LEFT JOIN (SELECT A.STAFF_SNB
+						   ,SUM(A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100) prc
+						   ,SUM(A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100) mar
+						   ,COUNT(1) cnt											<!-- 중개 성사(블록딜) -->
+						   <!-- 단독 -->
+						   ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1) * (A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100)) myPrc
+					       ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1) * (A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100)) myMar
+					       ,SUM(IFNULL((SELECT 0 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 1)) myCnt
+					       <!-- 공동 -->
+					       ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0) * (A.PRICE * (100-IFNULL(IJP.RATIO,0)) /100)) togePrc
+					       ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0) * (A.MARGIN * (100-IFNULL(IJP.RATIO,0)) /100)) togeMar
+						   ,SUM(IFNULL((SELECT 1 FROM IB_JOINT_PROGRESS WHERE OFFER_SNB = A.S_NB LIMIT 1), 0)) togeCnt
+						   
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT OFFER_SNB, SUM(RATIO) RATIO FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2' GROUP BY OFFER_SNB) IJP ON IJP.OFFER_SNB = A.S_NB
+					   LEFT JOIN IB_OFFER			OF ON A.OFFER_SNB = OF.S_NB
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+					    AND OF.CATEGORY_CD IN ('00004','00005','00006','00007')
+					  GROUP BY A.STAFF_SNB
+			) DSPSB ON DSPSB.STAFF_SNB = A.S_NB	
+		  
+		  <!-- SPRTB -->
+		  LEFT JOIN (SELECT IJP.STAFF_SNB
+		  				   ,SUM(A.PRICE * IJP.RATIO /100) prc 
+		  				   ,SUM(A.MARGIN * IJP.RATIO /100) mar 
+		  				   ,COUNT(1) cnt											<!-- 중개 성사 공동진행(블록딜) -->
+					   FROM IB_OFFER_DISPOSAL A
+					   LEFT JOIN (SELECT * FROM IB_JOINT_PROGRESS WHERE CATEGORY = '2') IJP ON IJP.OFFER_SNB = A.S_NB
+					   LEFT JOIN IB_OFFER			OF ON A.OFFER_SNB = OF.S_NB
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959')
+					    AND OF.CATEGORY_CD IN ('00004','00005','00006','00007')
+					  GROUP BY IJP.STAFF_SNB
+			) SPRTB ON SPRTB.STAFF_SNB = A.S_NB
+		  
+		  
+		  <!-- JOINT -->
+		  LEFT JOIN (SELECT IJP.STAFF_SNB, COUNT(1) CNT
+					   FROM IB_OFFER A
+					   LEFT JOIN (SELECT * FROM IB_JOINT_PROGRESS WHERE CATEGORY = '1') IJP ON IJP.OFFER_SNB = A.S_NB
+					  WHERE A.RG_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959')
+						AND A.MIDDLE_OFFER_CD IN ('00001','00002') AND A.CATEGORY_CD != '00013' AND A.CATEGORY_CD !='00012' AND A.CATEGORY_CD !='00008' and A.PROGRESS_CD = '00003'
+					  GROUP BY IJP.STAFF_SNB
+			) JOINT ON JOINT.STAFF_SNB = A.S_NB
+		
+		  <!-- ACHI -->
+		  LEFT JOIN (SELECT V.YEAR
+		  				   ,V.STAFF_NAME
+		  				   ,SUM(V.TOTAL_AMT) 	AS totalAmount			<!-- 투자 규모 -->
+		  				   ,SUM(V.REAL_INVEST) 	AS directInvest			<!-- 직접 규모 -->
+		  				   ,SUM(V.COUNT) 		AS count
+					   FROM BASE.EIS_REAL_INVEST_V	V		
+					   LEFT JOIN IB_OFFER			OF ON V.OFFER_SNB = OF.S_NB
+					  WHERE YEAR = #choice_year#
+					    AND OF.MIDDLE_OFFER_CD IN ('00001', '00002')
+					    AND OF.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+					  GROUP BY STAFF_NAME
+			) ACHI ON A.USR_NM = ACHI.STAFF_NAME
+		
+		  <!-- ACHIL --> 
+		  LEFT JOIN (SELECT V.YEAR
+		  				   ,V.STAFF_NAME
+		  				   ,SUM(V.TOTAL_AMT) 	AS totalAmount			<!-- 상장 투자 규모 -->
+		  				   ,SUM(V.REAL_INVEST) 	AS directInvest			<!-- 상장 직접 규모 -->
+		  				   ,SUM(V.COUNT) 		AS count
+					   FROM BASE.EIS_REAL_INVEST_V	V
+					   LEFT JOIN IB_OFFER			OF ON V.OFFER_SNB = OF.S_NB
+					   LEFT JOIN IB_COMPANY			C  ON C.CPN_ID = OF.CPN_ID
+					  WHERE V.YEAR = #choice_year#
+					    AND OF.MIDDLE_OFFER_CD IN ('00001', '00002')
+					    AND OF.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+					    AND LENGTH(TRIM(IFNULL(C.A_CPN_ID,''))) &gt; 0
+					  GROUP BY V.STAFF_NAME , V.YEAR
+			) ACHIL ON A.USR_NM = ACHIL.STAFF_NAME
+			
+		  <!-- ACHIU --> 
+		  LEFT JOIN (SELECT V.YEAR
+		  				   ,V.STAFF_NAME
+		  				   ,SUM(V.TOTAL_AMT) 	AS totalAmount			<!-- 비상장 투자 규모 -->
+		  				   ,SUM(V.REAL_INVEST) 	AS directInvest			<!-- 비상장 직접 규모 -->
+		  				   ,SUM(V.COUNT) 		AS count
+					   FROM BASE.EIS_REAL_INVEST_V	V
+					   LEFT JOIN IB_OFFER			OF ON V.OFFER_SNB = OF.S_NB
+					   LEFT JOIN IB_COMPANY			C  ON C.CPN_ID = OF.CPN_ID
+					  WHERE V.YEAR = #choice_year#
+					    AND OF.MIDDLE_OFFER_CD IN ('00001', '00002')
+					    AND OF.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+					    AND (CASE WHEN LENGTH(TRIM(IFNULL(C.A_CPN_ID,''))) &gt; 0 THEN FALSE ELSE TRUE END)
+					  GROUP BY V.STAFF_NAME , V.YEAR
+			) ACHIU ON A.USR_NM = ACHIU.STAFF_NAME
+		
+		  <!-- ACHII --> 
+		  LEFT JOIN (SELECT V.YEAR
+		  				   ,V.STAFF_NAME
+		  				   ,SUM(V.TOTAL_AMT) 	AS totalAmount			<!-- 프리IPO 투자 규모 -->
+		  				   ,SUM(V.REAL_INVEST) 	AS directInvest			<!-- 프리IPO 직접 규모 -->
+		  				   ,SUM(V.COUNT) 		AS count
+					   FROM BASE.EIS_REAL_INVEST_V	V
+					   LEFT JOIN IB_OFFER			OF ON V.OFFER_SNB = OF.S_NB					   
+					  WHERE V.YEAR = #choice_year#
+					    AND OF.CATEGORY_CD = '00012'
+					  GROUP BY V.STAFF_NAME , V.YEAR
+			) ACHII ON A.USR_NM = ACHII.STAFF_NAME
+		
+		  <!-- ACHIB --> 
+		  LEFT JOIN (SELECT V.YEAR
+		  				   ,V.STAFF_NAME
+		  				   ,SUM(V.TOTAL_AMT) 	AS totalAmount			<!-- 블록딜 투자 규모 -->
+		  				   ,SUM(V.REAL_INVEST) 	AS directInvest			<!-- 블록딜 직접 규모 -->
+		  				   ,SUM(V.COUNT) 		AS count
+					   FROM BASE.EIS_REAL_INVEST_V	V
+					   LEFT JOIN IB_OFFER			OF ON V.OFFER_SNB = OF.S_NB					   
+					  WHERE V.YEAR = #choice_year#
+					    AND OF.CATEGORY_CD IN ('00004','00005','00006','00007')					    
+					  GROUP BY V.STAFF_NAME , V.YEAR
+			) ACHIB ON A.USR_NM = ACHIB.STAFF_NAME
+		
+		
+		WHERE A.SRT_CD != '00000'
+		
+		<isNotEmpty prepend="" property="usrNm">
+			AND A.USR_NM = #usrNm#
+		</isNotEmpty>
+		  		
+		/* statsDAO.selectPrivateStats */
+	</select>
+
+
+	<select id="statsDAO.selectPrivateStatsDtl" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT
+				  A.S_NB 				   			AS sNb
+				, JJ2.USR_NM 						AS usrNm
+				, A.OFFER_CD 			   			AS offerCd
+				, A.MIDDLE_OFFER_CD      			AS middleOfferCd
+				, B.CD_NM 							AS offerNm
+				, DATE(A.TM_DT) 		   			AS tmDt
+				, A.RG_NM 			   				AS rgNm
+				, A.CST_ID 			   				AS cstId
+				, C.CST_NM         					AS cstNm
+				, D.CPN_NM         					AS cstCpnNm
+				, A.CPN_ID 			   				AS cpnId
+				, E.CPN_NM         					AS cpnNm
+				, A.CATEGORY_CD 		   			AS categoryCd
+				, A.PRICE 			   				AS price
+				, A.INVEST_PRICE 			   		AS investPrice
+				, A.DUE_DT 			   				AS dueDt
+				, A.FEEDBACK 			   			AS feedback
+				, A.PROGRESS_CD 		   			AS progressCd
+				, A.RESULT 			   				AS result
+				, A.MEMO 				   			AS memo
+				, A.USED				   			AS used
+				, A.SELL_BUY				   		AS sellBuy
+				, A.CPN_TYPE				   		AS cpnType
+				, A.RG_ID				   			AS rgId
+				, GROUP_CONCAT(J1.realNm SEPARATOR '^^^')   AS realNm
+				, GROUP_CONCAT(J1.makeNm SEPARATOR '^^^')   AS makeNm
+				, GROUP_CONCAT(J3.cmnt SEPARATOR ',')   	AS tmpNum1
+				, J4.mediInfo   							AS mediInfo
+				, J2.FINANCING            			AS financing
+				, J2.MANAGEMENT           			AS management
+				, J2.MNA                  			AS mna
+				, J2.ETC                  			AS etc
+				, J2.SHARE                			AS share
+				, J2.RESOURCE             			AS resource
+				, J2.HUMANNET            			AS humanNet
+				, J2.AUDIT	             			AS audit
+				, J2.STAR	             			AS star
+				, J2.INVESTINTE          			AS investInte
+				, J2.SERVEY          				AS servey
+				, J2.snbFINANCING            		AS snbFinancing
+				, J2.snbMANAGEMENT           		AS snbManagement
+				, J2.snbMNA                  		AS snbMna
+				, J2.snbETC                  		AS snbEtc
+				, J2.snbSHARE                		AS snbShare
+				, J2.snbResourc             		AS snbResource
+				, J2.snbHumanNet            		AS snbHumanNet
+				, J2.snbAUDIT	             		AS snbAudit
+				, J2.snbINVESTINTE          		AS snbInvestInte
+				, J2.snbSERVEY         				AS snbServey
+				, A.SUPPORTER 						AS supporter
+				, A.SUPPORTER_RATIO					AS supporterRatio
+				, A.SUPPORTER_TEXT					AS supporterText
+				, I.CST_NM 							AS supporterNm
+				, A.INFO_PROVIDER        			AS infoProvider
+				, F.CST_NM      					AS infoProviderNm
+				, G.CPN_NM      					AS infoProviderCpnNm
+
+				, A.INFO_LEVEL						AS infoLevel
+
+			FROM IB_OFFER A
+			
+            LEFT JOIN IB_COMMON_CODE 	B ON MENU_CD = '00002' AND DTAIL_CD = OFFER_CD
+            LEFT JOIN IB_CUSTOMER 		C ON C.S_NB = A.CST_ID
+            LEFT JOIN IB_COMPANY 		D ON D.CPN_ID = (SELECT CPN_ID FROM IB_CUSTOMER WHERE IB_CUSTOMER.S_NB = A.CST_ID)
+            LEFT JOIN IB_CUSTOMER 		F ON F.S_NB = A.INFO_PROVIDER
+            LEFT JOIN IB_COMPANY 		G ON G.CPN_ID = (SELECT CPN_ID FROM IB_CUSTOMER WHERE IB_CUSTOMER.S_NB = A.INFO_PROVIDER)
+            LEFT JOIN IB_COMPANY 		E ON E.CPN_ID = A.CPN_ID
+            LEFT JOIN IB_CUSTOMER 		I ON I.S_NB = A.SUPPORTER
+            LEFT JOIN (SELECT OFFER_SNB FROM IB_JOINT_PROGRESS GROUP BY OFFER_SNB) JJ1 ON JJ1.OFFER_SNB = A.S_NB
+            
+            LEFT JOIN (SELECT A.OFFER_SNB AS OFFER_SNB
+            				 ,GROUP_CONCAT(B.USR_NM SEPARATOR ',') AS USR_NM
+            			 FROM IB_JOINT_PROGRESS	A
+            			 LEFT JOIN IB_STAFF		B ON B.S_NB = A.STAFF_SNB
+            			 GROUP BY OFFER_SNB) JJ2 ON JJ2.OFFER_SNB = A.S_NB
+            LEFT JOIN
+                (SELECT OFFER_S_NB
+                      , REAL_NAME as realNm
+                      , MAKE_NAME as makeNm
+					  , report_yn
+                   FROM IB_FILE_INFO
+                  WHERE FILE_CATEGORY = '00000'
+
+                ) J1 ON A.S_NB = J1.OFFER_S_NB
+                
+            LEFT JOIN (
+					SELECT OFFER_SNB
+						 , MAX(CASE WHEN CATEGORY = '00001' THEN S_NB END) snbFinancing
+						 , MAX(CASE WHEN CATEGORY = '00002' THEN S_NB END) snbManagement
+						 , MAX(CASE WHEN CATEGORY = '00003' THEN S_NB END) snbMna
+						 , MAX(CASE WHEN CATEGORY = '00004' THEN S_NB END) snbEtc
+						 , MAX(CASE WHEN CATEGORY = '00005' THEN S_NB END) snbShare
+						 , MAX(CASE WHEN CATEGORY = '00006' THEN S_NB END) snbResourc
+						 , MAX(CASE WHEN CATEGORY = '00007' THEN S_NB END) snbHumanNet
+						 , MAX(CASE WHEN CATEGORY = '00008' THEN S_NB END) snbAudit
+						 , MAX(CASE WHEN CATEGORY = '00009' THEN S_NB END) snbInvestInte
+						 , MAX(CASE WHEN CATEGORY = '00010' THEN S_NB END) snbServey
+                         , MAX(CASE WHEN CATEGORY = '00001' THEN PROGRESS_CD END) CDfinancing
+                         , MAX(CASE WHEN CATEGORY = '00002' THEN PROGRESS_CD END) CDmanagement
+                         , MAX(CASE WHEN CATEGORY = '00003' THEN PROGRESS_CD END) CDdmna
+                         , MAX(CASE WHEN CATEGORY = '00004' THEN PROGRESS_CD END) CDetc
+                         , MAX(CASE WHEN CATEGORY = '00005' THEN PROGRESS_CD END) CDshare
+                         , MAX(CASE WHEN CATEGORY = '00006' THEN PROGRESS_CD END) CDresource
+                         , MAX(CASE WHEN CATEGORY = '00007' THEN PROGRESS_CD END) CDhumanNet
+                         , MAX(CASE WHEN CATEGORY = '00008' THEN PROGRESS_CD END) CDaudit
+                         , MAX(CASE WHEN CATEGORY = '00009' THEN PROGRESS_CD END) CDinvestInte
+                         , MAX(CASE WHEN CATEGORY = '00010' THEN PROGRESS_CD END) CDservey
+                         , MAX(CASE WHEN CATEGORY = '00001' THEN COMMENT END) financing
+                         , MAX(CASE WHEN CATEGORY = '00002' THEN COMMENT END) management
+                         , MAX(CASE WHEN CATEGORY = '00003' THEN COMMENT END) mna
+                         , MAX(CASE WHEN CATEGORY = '00004' THEN COMMENT END) etc
+                         , MAX(CASE WHEN CATEGORY = '00005' THEN COMMENT END) share
+                         , MAX(CASE WHEN CATEGORY = '00006' THEN COMMENT END) resource
+                         , MAX(CASE WHEN CATEGORY = '00007' THEN COMMENT END) humanNet
+                         , MAX(CASE WHEN CATEGORY = '00008' THEN COMMENT END) audit
+                         , MAX(CASE WHEN CATEGORY = '00008' THEN STAR END) star
+                         , MAX(CASE WHEN CATEGORY = '00009' THEN COMMENT END) investInte
+                         , MAX(CASE WHEN CATEGORY = '00010' THEN COMMENT END) servey
+					  FROM IB_OFFER_INFO
+					  GROUP BY OFFER_SNB
+					) J2 ON A.S_NB = J2.OFFER_SNB
+					
+			LEFT JOIN(
+					SELECT CONCAT(jp.RATIO, '% ', stf.USR_NM)	AS cmnt
+						  ,JP.OFFER_SNB 						AS offer_snb 
+					  FROM IB_JOINT_PROGRESS JP
+					  LEFT JOIN IB_STAFF STF ON STF.S_NB = JP.STAFF_SNB
+				) J3 ON J3.OFFER_SNB = A.S_NB
+				
+			LEFT JOIN(
+					SELECT GROUP_CONCAT(CONCAT(OD.PRICE, '/', OD.MARGIN, ' ', stf.USR_NM) SEPARATOR ',') AS mediInfo,
+        		           OD.OFFER_SNB AS offer_snb
+				      FROM IB_OFFER_DISPOSAL	OD
+				      LEFT JOIN IB_STAFF		STF ON STF.S_NB = OD.STAFF_SNB
+				     GROUP BY OD.OFFER_SNB
+				) J4 ON J4.OFFER_SNB = A.S_NB
+			
+			WHERE 1=1
+		]]>
+            <isNotEmpty prepend="AND" property="choice_month">
+				<![CDATA[	A.TM_DT BETWEEN CONCAT (#choice_year#, #choice_monthS#, '01') AND CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+			
+			<isEqual prepend="AND" property="sort_t" compareValue="101">
+				<![CDATA[	LENGTH(A.INVEST_PRICE)>0			]]>
+			</isEqual>
+			<isEqual prepend="AND" property="sort_t" compareValue="102">
+				<![CDATA[	LENGTH(A.INVEST_PRICE)>0	AND	IFNULL(JJ1.OFFER_SNB, 0) != 0  		]]>
+			</isEqual>
+            <isNotEmpty prepend="AND" property="cpnId">
+				<![CDATA[	A.CPN_ID = #cpnId# 		]]>
+			</isNotEmpty>
+            <isNotEmpty prepend="AND" property="cstId">
+				<![CDATA[	A.CST_ID = #cstId# 		]]>
+			</isNotEmpty>
+            <isEqual prepend="AND" property="tmpNum1" compareValue="on">
+				<![CDATA[	A.S_NB = #sNb# 		]]>
+			</isEqual>
+			
+            <isNotEmpty prepend="AND" property="middleOfferCd">
+				<isEqual property="middleOfferCd" compareValue="00001">
+				(A.MIDDLE_OFFER_CD = '00001' or A.MIDDLE_OFFER_CD = '00002')
+				</isEqual>
+				<isNotEqual property="middleOfferCd" compareValue="00001">
+				A.MIDDLE_OFFER_CD = #middleOfferCd#
+				</isNotEqual>
+			</isNotEmpty>
+			
+            <isNotEmpty prepend="AND" property="offerCd">
+				<![CDATA[	case when #offerCd# = '00003' then A.OFFER_CD in ('00002','00003') else A.OFFER_CD = #offerCd# end 		]]>
+			</isNotEmpty>
+            <isNotEmpty prepend="AND" property="progressCd">
+				<![CDATA[	A.PROGRESS_CD = #progressCd# 		]]>
+			</isNotEmpty>
+            <isNotEmpty prepend="AND" property="infoProvider">
+				<![CDATA[	A.INFO_PROVIDER = #infoProvider# 		]]>
+			</isNotEmpty>
+            <isNotEmpty prepend="AND" property="supporter">
+				<![CDATA[	A.SUPPORTER = #supporter# 		]]>
+			</isNotEmpty>
+            <isEqual prepend="AND" property="reportYN" compareValue="Y"><![CDATA[
+				j1.REPORT_YN = 'Y'
+			]]></isEqual>
+
+			<!-- 
+			<isEqual prepend="AND" property="sort_t" compareValue="mna">
+				A.CATEGORY_CD = '00008'
+			</isEqual>
+			<isEqual prepend="AND" property="sort_t" compareValue="ipo">
+				A.CATEGORY_CD = '00012'
+			</isEqual>
+			<isEqual prepend="AND" property="sort_t" compareValue="spac">
+				A.CATEGORY_CD = '00013'
+			</isEqual>
+			
+			<isNotEqual property="sort_t" compareValue="mna">
+			<isNotEqual property="sort_t" compareValue="ipo">			
+			<isNotEqual property="sort_t" compareValue="spac">
+				and A.CATEGORY_CD != '00008' AND A.CATEGORY_CD != '00012' AND A.CATEGORY_CD != '00013'
+			</isNotEqual>
+			</isNotEqual>
+			</isNotEqual>
+			 -->
+			
+			<!-- ==== :S ==== -->
+			
+			<isEqual prepend="" property="category" compareValue="listed">		<!-- 상장 -->
+				AND A.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+				AND A.MIDDLE_OFFER_CD IN ('00001', '00002')
+				AND LENGTH(TRIM(IFNULL(E.A_CPN_ID,''))) &gt; 0
+			</isEqual>
+			<isEqual prepend="" property="category" compareValue="unlisted">	<!-- 비상장 -->
+				AND A.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+				AND A.MIDDLE_OFFER_CD IN ('00001', '00002')
+				AND (CASE WHEN LENGTH(TRIM(IFNULL(E.A_CPN_ID,''))) &gt; 0 THEN FALSE ELSE TRUE END)
+			</isEqual>
+			<isEqual prepend="AND" property="category" compareValue="preIpo">	<!-- 프리IPO -->
+				A.CATEGORY_CD = '00012'
+			</isEqual>
+			<isEqual prepend="AND" property="category" compareValue="block">	<!-- 블록딜 -->
+				A.CATEGORY_CD IN ('00004','00005','00006','00007')
+			</isEqual>
+			<isEqual prepend="AND" property="category" compareValue="mna">		<!-- M&A -->
+				A.CATEGORY_CD = '00008'
+			</isEqual>
+			
+			
+			<isNotEmpty prepend="AND" property="invest">						<!-- 투자여부 -->
+				A.PROGRESS_CD = #invest#
+			</isNotEmpty>
+			
+			<isEqual prepend="AND" property="direct" compareValue="Y">			<!-- 직접투자건 여부(중개제외) -->
+				NOT EXISTS (SELECT 1
+						  	  FROM IB_OFFER_DISPOSAL
+						 	 WHERE OFFER_SNB = A.S_NB
+						 	   AND PRICE * 1 = A.INVEST_PRICE * 1)
+			</isEqual>
+			
+			<isEqual prepend="AND" property="mediate" compareValue="Y">			<!-- 중개여부 -->
+				EXISTS (SELECT 1
+						  FROM IB_OFFER_DISPOSAL
+						 WHERE OFFER_SNB = A.S_NB)
+			</isEqual>
+			
+			<!-- ==== :E ==== -->
+			
+			
+            <isNotEqual property="sort_joint" compareValue="joint">
+				<isNotEmpty prepend="AND" property="rgNm">
+				(A.RG_NM = #rgNm# OR INSTR(JJ2.USR_NM, #rgNm#) > 0)				<!-- A.RG_NM = #rgNm# -->
+				</isNotEmpty>
+			</isNotEqual>
+			
+            <isEqual prepend="AND" property="sort_joint" compareValue="joint">
+				(A.RG_NM = #rgNm# OR INSTR(JJ2.USR_NM, #rgNm#) > 0)
+			</isEqual>
+			
+			GROUP BY A.S_NB
+			ORDER BY A.TM_DT DESC
+			
+		/* statsDAO.selectPrivateStatsDtl */
+	</select>
+	
+
+	<!-- 중개 상세 정보 -->
+	<select id="stats.selectMediateInfo" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+			  DSPS.S_NB                as  sNb
+			, DSPS.OFFER_SNB           as  offerSnb
+			, DSPS.MARGIN              as  margin
+			, DSPS.PRICE               as  price
+			, DSPS.MARGIN * 1          as  marginNum
+			, DSPS.PRICE * 1           as  priceNum
+			
+			, DSPS.STAFF_SNB          as  staffSnb
+			, STF.USR_NM              as  rgNm
+			, DSPS.INVEST_SNB          as  investSnb
+			, CST2.S_NB                as snb2nd
+			, CASE WHEN DSPS.category = '1' then CST2.CST_NM else CPN.CPN_NM end      as cstNm2nd
+			, CASE WHEN DSPS.category = '1' then CPN2.CPN_NM end        		     as cpnNm2nd
+			, IFNULL(DSPS.NOTE,"-")    as  note
+			, DATE(DSPS.UP_DT)         as  tmDt
+			, DSPS.RG_ID               as rgId
+			, DSPS.UP_ID               as upId
+			, io.rg_nm					as  usrNm
+			, ic.cpn_nm					as  cpnNm
+			, Cmm.CD_NM 	 			as  categoryNm
+			
+			, io.TM_DT					as offerTmDt
+			
+			
+		FROM IB_OFFER_DISPOSAL DSPS
+		
+		LEFT JOIN IB_STAFF STF ON DSPS.STAFF_SNB = STF.S_NB
+		LEFT JOIN IB_CUSTOMER CST2 ON DSPS.INVEST_SNB = CST2.S_NB
+		LEFT JOIN IB_COMPANY CPN2 ON CST2.CPN_ID = CPN2.CPN_ID
+		LEFT JOIN IB_COMPANY CPN ON DSPS.INVEST_SNB = CPN.S_NB
+		
+		LEFT JOIN (select jp.offer_snb
+					from ib_joint_progress jp
+					left join ib_staff stf on stf.s_nb = jp.staff_snb
+					where jp.category = '2' and  stf.usr_nm = #tmpNum1#
+					group by jp.offer_snb
+		) sprt on sprt.offer_snb = dsps.s_nb
+			
+		LEFT JOIN IB_OFFER IO ON IO.S_NB = DSPS.OFFER_SNB
+		LEFT JOIN IB_COMMON_CODE Cmm ON (Cmm.MENU_CD = '00005' AND Cmm.DTAIL_CD = io.category_cd)
+		LEFT JOIN IB_COMPANY IC ON IC.CPN_ID = IO.CPN_ID
+		
+	   WHERE (stf.usr_nm = #tmpNum1# or sprt.offer_snb is not null)
+		 AND dsps.rg_dt between concat(#choice_year#,'0101') and concat(#choice_year#,'1231235959')
+		 
+		<!-- ==== :S ==== -->			
+		<isEqual prepend="" property="category" compareValue="listed">		<!-- 상장 -->
+			AND IO.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+			AND IO.MIDDLE_OFFER_CD IN ('00001', '00002')
+			AND LENGTH(TRIM(IFNULL(IC.A_CPN_ID,''))) &gt; 0
+		</isEqual>
+		<isEqual prepend="" property="category" compareValue="unlisted">	<!-- 비상장 -->
+			AND IO.CATEGORY_CD NOT IN ('00004','00005','00006','00007','00008','00012')
+			AND IO.MIDDLE_OFFER_CD IN ('00001', '00002')
+			AND (CASE WHEN LENGTH(TRIM(IFNULL(IC.A_CPN_ID,''))) &gt; 0 THEN FALSE ELSE TRUE END)
+		</isEqual>
+		<isEqual prepend="AND" property="category" compareValue="preIpo">	<!-- 프리IPO -->
+			IO.CATEGORY_CD = '00012'
+		</isEqual>
+		<isEqual prepend="AND" property="category" compareValue="block">	<!-- 블록딜 -->
+			IO.CATEGORY_CD IN ('00004','00005','00006','00007')
+		</isEqual>
+		<!-- ==== :E ==== -->
+		 
+		/* stats.selectMediateInfo */
+	</select>
+
+
+</sqlMap>

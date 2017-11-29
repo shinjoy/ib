@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="workType">
+
+
+	<!-- 업무유형 정보 -->
+	<select id="workType.getWorkTypeList" parameterClass="HashMap" resultClass="HashMap">		
+		SELECT A.WORK_TYPE_ID			AS workTypeId
+			  ,WORK_TYPE_NM				AS workTypeNm
+			  ,COMPANY_NM				AS companyNm
+			  ,MEMO						AS memo
+			
+		      ,GROUP_CONCAT(CONCAT((SELECT USR_NM FROM IB_STAFF WHERE S_NB=B.USER_ID),'|',B.USER_ID) ORDER BY (SELECT USR_NM FROM IB_STAFF WHERE S_NB=B.USER_ID) SEPARATOR ',')	AS userList
+		      ,GROUP_CONCAT((SELECT USR_NM FROM IB_STAFF WHERE S_NB=B.USER_ID) ORDER BY (SELECT USR_NM FROM IB_STAFF WHERE S_NB=B.USER_ID) ASC SEPARATOR ',')					AS userNmList
+		      
+		      ,
+		<isNotEmpty property="searchTextList">	
+			<iterate property="searchTextList" open="(" close=")" conjunction="+">
+				IF(INSTR(CONCAT(WORK_TYPE_NM, ' ', COMPANY_NM, ' ', MEMO), #searchTextList[]#) &gt; 0, 1, 0)
+			</iterate>
+		</isNotEmpty>
+		<isEmpty property="searchTextList">
+			0
+		</isEmpty>	
+				AS matchCnt		<!-- 매칭 수 카운팅 -->
+		      
+		      
+		  FROM BASE.BS_WORK_TYPE				A
+		  LEFT JOIN BASE.BS_WORK_TYPE_STAFF	B	ON A.WORK_TYPE_ID = B.WORK_TYPE_ID
+		 WHERE 1=1
+				
+		<isNotEmpty prepend="AND" property="searchTextList">
+			<!-- AND 검색		!!!!! AND 검색으로 하게되면 살리자
+		  	<iterate property="searchTextList" open="(" close=")" conjunction="AND">
+				CONCAT(WORK_TYPE_NM, ' ', COMPANY_NM, ' ', MEMO) LIKE '%$searchTextList[]$%'
+			</iterate> -->
+										
+			<!-- OR 검색 -->				
+			<isNotEmpty property="searchTextStr">		<!-- <isNotEmpty prepend="OR" property="searchTextStr"> -->
+			  	CONCAT(WORK_TYPE_NM, ' ', COMPANY_NM, ' ', MEMO) REGEXP #searchTextStr#
+			</isNotEmpty>
+		</isNotEmpty>
+		 
+		GROUP BY A.WORK_TYPE_ID 
+		ORDER BY matchCnt DESC, A.WORK_TYPE_NM ASC	<!--  매칭수 정렬(검색 유력후보), 유형명 정렬 -->
+					
+		/* workType.getWorkTypeList */
+	</select>
+	
+	
+	<!-- 업무유형 등록 -->
+	<insert id="workType.insertWorkType" parameterClass="HashMap">
+		INSERT INTO BASE.BS_WORK_TYPE(
+								WORK_TYPE_NM
+							   ,COMPANY_NM
+							   ,MEMO
+							   ,CREATE_DATE
+							   ,CREATED_BY
+							   ,UPDATE_DATE
+							   ,UPDATED_BY
+							  
+							)VALUES(
+								#workTypeNm#
+							   ,#companyNm#
+							   ,#memo#
+							   ,NOW()
+							   ,#rgId#
+							   ,NOW()
+							   ,#rgId#
+							)
+							
+			<selectKey keyProperty="workTypeId" resultClass="Integer">
+				SELECT LAST_INSERT_ID()
+			</selectKey>
+			
+		/* workType.insertWorkType */
+	</insert>
+	
+	
+	<!-- 업무유형 수정 -->
+	<update id="workType.updateWorkType" parameterClass="HashMap">
+		UPDATE BASE.BS_WORK_TYPE
+		   SET WORK_TYPE_NM = #workTypeNm#
+		      ,COMPANY_NM	= #companyNm#
+			  ,MEMO 		= #memo#
+			  ,UPDATE_DATE	= NOW()
+			  ,UPDATED_BY	= #rgId#
+			  
+		 WHERE WORK_TYPE_ID = #workTypeId#
+			
+		/* workType.updateWorkType */
+	</update>
+	
+	
+	<!-- 업무유형 업무담당자 등록 -->
+	<insert id="workType.insertWorkTypeStaff" parameterClass="HashMap">
+		INSERT INTO BASE.BS_WORK_TYPE_STAFF(
+								WORK_TYPE_ID
+							   ,USER_ID
+							   ,CREATE_DATE
+							   ,CREATED_BY
+							  
+							)VALUES(
+								#workTypeId#
+							   ,#userId#
+							   ,NOW()
+							   ,#rgId#
+							)
+		/* workType.insertWorkTypeStaff */
+	</insert>
+	
+	
+	<!-- 업무유형 업무담당자 삭제 -->
+	<delete id="workType.deleteWorkTypeStaff" parameterClass="HashMap">
+		DELETE FROM BASE.BS_WORK_TYPE_STAFF
+		 WHERE WORK_TYPE_ID = #workTypeId#
+	
+		/* workType.deleteWorkTypeStaff */
+	</delete>
+	
+	
+	<!-- 업무유형 삭제 -->
+	<delete id="workType.deleteWorkType" parameterClass="HashMap">
+		DELETE FROM BASE.BS_WORK_TYPE
+		 WHERE WORK_TYPE_ID = #workTypeId#
+	
+		/* workType.deleteWorkType */
+	</delete>
+	
+
+	
+	
+</sqlMap>

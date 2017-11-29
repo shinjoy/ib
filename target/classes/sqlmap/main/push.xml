@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="push">
+
+
+
+	
+	<!-- push 정보 업데이트(token,uuid,type)  -->
+	<update id="push.updateUserProfileToPushInfo" parameterClass="HashMap">
+
+		UPDATE BASE.BS_USER_PROFILE 
+		SET
+			 UPDATE_DATE = NOW()
+			,UPDATED_BY	 = #userId#
+		
+		<isNotEmpty  property="deviceType">
+			,DEVICE_TYPE	=	#deviceType#
+		</isNotEmpty>
+		
+		<isNotEmpty property="deviceToken">
+			,DEVICE_TOKEN	=	#deviceToken#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="deviceUuid">
+			,DEVICE_UUID	=	#deviceUuid#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="memoPushYn">				<!-- 메모 푸시여부 -->
+			,MEMO_PUSH_YN = #memoPushYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="memoCommentPushYn">		<!-- 메모 댓글 푸시여부 -->
+			,MEMO_COMMENT_PUSH_YN = #memoCommentPushYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="dealPushYn">				<!-- 딜 신규등록 푸시여부 -->
+			,DEAL_PUSH_YN = #dealPushYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="dealCommentPushYn">		<!-- 딜 코멘트 푸시여부 -->
+			,DEAL_COMMENT_PUSH_YN = #dealCommentPushYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="dealStatusPushYn">		<!-- 딜 상태변화 푸시여부 -->
+			,DEAL_STATUS_PUSH_YN = #dealStatusPushYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="dealAnalPushYn">			<!-- 딜 분석자 지정 푸시여부 -->
+			,DEAL_ANAL_PUSH_YN = #dealAnalPushYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="schedulePushYn">			<!-- 일정 등록 푸시여부 -->
+			,SCHEDULE_PUSH_YN = #schedulePushYn#
+		</isNotEmpty>
+		
+		
+		WHERE USER_ID	=	#userId#
+
+		/* push.updateUserProfileToPushInfo */
+	</update>
+	
+	<!-- push log -->
+	<insert id="push.insertPushLog"  parameterClass="HashMap">
+	
+		INSERT INTO BASE.BS_PUSH_LOG (
+		
+					  PUSH_TYPE
+					, PUSH_TYPE_ID
+					, CONTENT
+					, SEND_ID
+					, RECV_ID
+					
+					
+					, SEND_DT
+					, RG_DT
+					, RG_ID
+					, UP_DT
+					, UP_ID
+					
+					, SEND_RESULT
+					, ERR_MSG
+			
+		
+		)VALUES(
+					  #pushType#
+					, #pushTypeId#
+					, #content#
+					, #sendId#
+					, #recvId#
+					
+					, NOW()
+					, NOW()
+					, #sendId#
+					, NOW()
+					, #sendId#
+		
+					, #sendResult#
+					, #errMsg#
+		)
+	
+	
+		<selectKey keyProperty="pushId" resultClass="string">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+			
+		/* push.insertPushLog */		  
+	</insert>
+	
+	<!-- alarm List -->
+	<select id="push.getAlarmList"  parameterClass="HashMap" resultClass="HashMap">
+		
+		SELECT 
+			 push.PUSH_ID 		AS pushId
+		    ,push.PUSH_TYPE 	AS pushType
+		    ,push.READ_YN 		AS readYn
+		    ,push.PUSH_TYPE_ID 	AS pushTypeId
+		    ,push.CONTENT 		AS content
+		    ,DATE_FORMAT(push.SEND_DT,'%Y-%m-%d %H:%i:%s') 		AS sendDt
+		    ,(SELECT USR_NM FROM IB_STAFF WHERE push.SEND_ID = S_NB) AS sendNm
+		    
+		    ,IFNULL(
+				CASE WHEN push.PUSH_TYPE = 'SCHEDULE' THEN 
+					(SELECT 
+							IF(
+								DELFLAG = 'N' AND SCHESEQ IS NOT NULL,							<!-- 본글 있는지 확인 -->
+								
+								CONCAT(
+									SCHETITLE,'@!^',SCHESDATE,'@!^',SCHEEDATE,'@!^'
+									
+									,DATE_FORMAT(STR_TO_DATE(concat(SCHESDATE,' ',SCHESTIME,':00 ',SCHESTIMEAMPM),'%Y-%m-%d  %l:%i:%S %p'),'%k:%i'),'@!^'
+									,DATE_FORMAT(STR_TO_DATE(concat(SCHEEDATE,' ',SCHEETIME,':00 ',SCHEETIMEAMPM),'%Y-%m-%d  %l:%i:%S %p'),'%k:%i'),'@!^'
+									
+									,SCHECON
+								)
+							
+							,'') AS contentData
+						
+							
+							FROM ERP.ERP_SCHEDULE
+							WHERE SCHESEQ = push.PUSH_TYPE_ID 
+					)
+		    
+					WHEN push.PUSH_TYPE = 'MEMOCOMMENT' THEN
+					(
+						SELECT
+							IF(
+								(SELECT COUNT(1) FROM IB_COMMENT WHERE S_NB = R.MAIN_SNB) &gt; 0 <!-- 본글 있는지 확인 -->
+								 AND R.S_NB IS NOT NULL,	
+								
+								 CONCAT(
+									
+								     
+								     0,'@!^',NAME,'@!^','0','@!^',R.COMMENT,'@!^',MAIN_SNB,'@!^',
+								     IFNULL((SELECT S_NB FROM IB_COMMENT WHERE MAIN_SNB = R.MAIN_SNB AND NAME = (SELECT USR_NM FROM SYNERGYMAIN.IB_STAFF WHERE S_NB = #userId#))
+								     	  , (SELECT S_NB FROM IB_COMMENT WHERE S_NB = R.MAIN_SNB))
+								  )
+							,'') AS contentData
+							
+							
+							FROM SYNERGYMAIN.IB_REPLY AS R
+							WHERE S_NB = push.PUSH_TYPE_ID
+							
+					)
+		            
+		            WHEN push.PUSH_TYPE = 'MEMO' THEN
+					(
+						SELECT
+							IF(
+								C.S_NB IS NOT NULL,		<!-- 본글 있는지 확인 -->
+								CONCAT(
+								
+									 CASE WHEN C.MAIN_SNB = 0 
+									 THEN IFNULL((SELECT (CASE WHEN REP_SNB = 0 THEN '00002' ELSE STTS_CD END) FROM IB_REPLY WHERE MAIN_SNB = C.S_NB ORDER BY S_NB DESC LIMIT 1), '00002')
+			                         ELSE C.STTS_CD	END
+												 
+											
+			                        ,'@!^',NAME,'@!^',(SELECT COUNT(1) FROM IB_COMMENT WHERE MAIN_SNB = c.S_NB OR S_NB = c.S_NB),'@!^'
+			                        
+			                        ,C.COMMENT,'@!^'
+			                        
+			                        ,MAIN_SNB,'@!^',S_NB,'@!^'
+			                        
+			                        ,IF(C.MEMO_TYPE != '00010', (SELECT CD_NM FROM IB_COMMON_CODE WHERE MENU_CD = '00026' AND DTAIL_CD = C.MEMO_TYPE),'')
+								) 	
+			                ,'') AS contentData
+							
+							
+							FROM SYNERGYMAIN.IB_COMMENT AS C
+							WHERE IF(MAIN_SNB = 0,S_NB, MAIN_SNB ) = push.PUSH_TYPE_ID
+								AND NAME = (SELECT USR_NM FROM SYNERGYMAIN.IB_STAFF WHERE S_NB = #userId#)
+							
+					)
+					
+					WHEN push.PUSH_TYPE = 'DEAL' THEN
+					(
+						SELECT
+							IF(
+								C.S_NB IS NOT NULL,		<!-- 본글 있는지 확인 -->
+								CONCAT(
+								
+									 C.S_NB,'@!^',C.CPN_ID,'@!^',C.MIDDLE_OFFER_CD,'@!^',C.OFFER_CD,'@!^',C.CATEGORY_CD,'@!^'
+									 ,(SELECT CPN_NM FROM IB_COMPANY WHERE CPN_ID = C.CPN_ID),'@!^'
+									 ,(SELECT TEMP FROM IB_COMMON_CODE WHERE MENU_CD = '00005' AND DTAIL_CD = C.CATEGORY_CD)
+									
+			                    
+			                    )
+							,'') AS contentData
+							
+							
+							FROM SYNERGYMAIN.IB_OFFER AS C
+							WHERE S_NB = push.PUSH_TYPE_ID
+								
+							
+					)
+					
+					WHEN push.PUSH_TYPE = 'DEALCOMMENT'  THEN
+					(
+						
+							SELECT
+							IF(
+								O.S_NB IS NOT NULL AND R.S_NB IS NOT NULL,	<!-- 본글 있는지 확인 -->
+									CONCAT(
+									
+										 O.S_NB,'@!^',O.CPN_ID,'@!^',R.S_NB,'@!^',O.OFFER_CD,'@!^',R.COMMENT,'@!^'
+										 ,(SELECT CPN_NM FROM IB_COMPANY WHERE CPN_ID = O.CPN_ID),'@!^'
+										 ,(SELECT TEMP FROM IB_COMMON_CODE WHERE MENU_CD = '00005' AND DTAIL_CD = O.CATEGORY_CD)
+										
+				                    
+				                    )
+				              ,'') AS contentData
+							
+							
+							FROM SYNERGYMAIN.IB_RECOMMEND_OPINION AS R
+							LEFT OUTER JOIN SYNERGYMAIN.IB_OFFER  AS O ON R.OFFER_SNB = O.S_NB
+							WHERE R.S_NB = push.PUSH_TYPE_ID
+								
+							
+					)
+					
+					WHEN push.PUSH_TYPE = 'DEALOPINION' || push.PUSH_TYPE = 'DEALSTATUS'  THEN
+					(
+						
+							SELECT
+							IF(
+									S_NB IS NOT NULL,	<!-- 본글 있는지 확인 -->
+									CONCAT(
+									
+										  S_NB,'@!^',CPN_ID,'@!^',MIDDLE_OFFER_CD,'@!^',OFFER_CD,'@!^',push.CONTENT,'@!^'
+										 ,(SELECT CPN_NM FROM IB_COMPANY WHERE CPN_ID = O.CPN_ID),'@!^'
+										 ,(SELECT TEMP FROM IB_COMMON_CODE WHERE MENU_CD = '00005' AND DTAIL_CD = CATEGORY_CD)
+										
+				                    
+				                    )
+				              ,'') AS contentData
+							
+							
+							FROM SYNERGYMAIN.IB_OFFER  AS O
+							WHERE S_NB = push.PUSH_TYPE_ID
+								
+							
+					)
+					WHEN push.PUSH_TYPE = 'DEALANAL'  THEN
+					(
+						
+							SELECT
+							IF(
+									O.S_NB IS NOT NULL,	<!-- 본글 있는지 확인 -->
+									CONCAT(
+									
+										  O.S_NB,'@!^',O.CPN_ID,'@!^',O.MIDDLE_OFFER_CD,'@!^',O.OFFER_CD,'@!^','분석자로 지정되었습니다.','@!^'
+										 ,(SELECT CPN_NM FROM IB_COMPANY WHERE CPN_ID = O.CPN_ID),'@!^'
+										 ,(SELECT TEMP FROM IB_COMMON_CODE WHERE MENU_CD = '00005' AND DTAIL_CD = O.CATEGORY_CD)
+										
+				                    
+				                    )
+				              ,'') AS contentData
+							
+							FROM BASE.BS_ANAL_USER  AS U
+							LEFT OUTER JOIN SYNERGYMAIN.IB_OFFER  AS O ON U.OFFER_ID = O.S_NB
+							
+							WHERE U.ANAL_USER_ID = push.PUSH_TYPE_ID
+								
+							
+					)
+					END
+		    
+		    
+		    ,'')AS contentData
+		    
+		
+		FROM BASE.BS_PUSH_LOG AS push
+		
+			
+		
+		WHERE push.RECV_ID = #userId# AND SEND_RESULT = 1
+		
+			AND (DATE_FORMAT(push.SEND_DT, '%Y-%m-%d') 
+					BETWEEN DATE_FORMAT(DATE_ADD(NOW(), INTERVAL -5 DAY), '%Y-%m-%d')
+					AND DATE_FORMAT(NOW(), '%Y-%m-%d')
+			
+			)
+		
+		<isNotEmpty  prepend="AND" property="readYn">
+			push.READ_YN = #readYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  prepend="AND" property="listYn">
+		 	push.LIST_YN = #listYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  prepend="AND" property="searchType">
+		 	
+		 	(push.PUSH_TYPE = #searchType#
+		 	
+		 	<isEqual property="searchType" compareValue="MEMO">
+		 		OR push.PUSH_TYPE = 'MEMOCOMMENT'
+		 	</isEqual>
+		 	
+		 	<isEqual property="searchType" compareValue="DEAL">
+		 		
+		 		OR push.PUSH_TYPE = 'DEALCOMMENT'
+		 		OR push.PUSH_TYPE = 'DEALANAL'
+		 		OR push.PUSH_TYPE = 'DEALOPINION'
+		 		OR push.PUSH_TYPE = 'DEALSTATUS'
+		 	
+		 	</isEqual>
+		 	)
+		</isNotEmpty>
+		
+		ORDER BY SEND_DT DESC
+		
+		
+		/* push.getAlarmList */	
+	</select>
+	
+	<!-- 읽음 처리   -->
+	<update id="push.updateAlarmReadStatus"  parameterClass="HashMap">
+	
+		UPDATE  BASE.BS_PUSH_LOG
+		
+		SET
+			 UP_DT = NOW()
+			,UP_ID = #userId#
+		
+		<isNotEmpty  property="listYn">		<!-- 리스트 노출여부 -->
+		 	,LIST_YN = #listYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="readYn">		<!-- 읽음 처리 여부 -->
+		 	,READ_YN = #readYn#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="countYn">	<!-- 뱃지 갯수 카운트 포함 여부 -->
+		 	,COUNT_YN = #countYn#
+		</isNotEmpty>
+		
+		
+		
+		WHERE RECV_ID = #userId#
+		
+		<isNotEmpty  property="date">
+		 	 AND DATE_FORMAT(SEND_DT, '%Y-%m-%d') = #date#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="pushId">
+		 	 AND PUSH_ID = #pushId#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="pushType">
+		 	 AND PUSH_TYPE = #pushType#
+		</isNotEmpty>
+		
+		<isNotEmpty  property="pushTab">
+			AND (PUSH_TYPE = #pushTab#
+		 	
+		 	<isEqual property="pushTab" compareValue="MEMO">
+		 		OR PUSH_TYPE = 'MEMOCOMMENT'
+		 	</isEqual>
+		 	
+		 	<isEqual property="pushTab" compareValue="DEAL">
+		 		
+		 		OR PUSH_TYPE = 'DEALCOMMENT'
+		 		OR PUSH_TYPE = 'DEALANAL'
+		 		OR PUSH_TYPE = 'DEALOPINION'
+		 		OR PUSH_TYPE = 'DEALSTATUS'
+		 	
+		 	</isEqual>
+		 	)
+		</isNotEmpty>
+		
+		
+		/* push.updateAlarmReadStatus */	
+	
+	</update>
+	
+	<!-- 푸시 뱃지 갯수 -->
+	<select id="push.getBadgeCount" parameterClass="HashMap" resultClass="java.lang.String">
+	
+		SELECT COUNT(*) 
+		
+		FROM BASE.BS_PUSH_LOG 
+		
+		WHERE 1=1
+		
+		AND RECV_ID = #userId# AND SEND_RESULT = 1
+		
+		<isNotEmpty  property="countYn">
+		 	 AND COUNT_YN = #countYn#
+		</isNotEmpty>
+		
+	
+	/* push.getBadgeCount */	
+	</select>
+	
+
+</sqlMap>

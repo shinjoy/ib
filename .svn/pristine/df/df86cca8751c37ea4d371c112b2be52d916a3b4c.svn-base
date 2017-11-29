@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="personnel">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="personnelVO" type="ib.personnel.service.PersonnelVO"/>
+
+
+	<select id="personnelDAO.selectPersonnelYearList" parameterClass="personnelVO" resultClass="personnelVO">
+		<![CDATA[
+		  SELECT 
+			     STAFF_ID                          AS staffId
+		       , (SELECT USR_NM FROM IB_STAFF WHERE IB_STAFF.S_NB = STAFF_ID) AS staffNm
+			   , GROUP_CONCAT(MT ORDER BY TM_DT)   AS grMon
+			   , GROUP_CONCAT(HLD ORDER BY TM_DT)  AS grHld
+		    FROM  
+			   (
+				SELECT 
+					   STAFF_ID
+					 , EXTRACT(MONTH FROM TM_DT) AS MT
+					 , SUM(HOLIDAY) AS HLD
+					 , TM_DT
+				  FROM IB_PERSONNEL 
+			  GROUP BY STAFF_ID, MT
+			  ORDER BY TM_DT
+			   ) A
+		   WHERE 1=1
+		   	 AND FLAG_HT = #flagHt#
+		]]>
+        <isNotEmpty prepend="AND" property="choice_year">
+			<![CDATA[	A.TM_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+		</isNotEmpty>
+		<![CDATA[
+		GROUP BY A.STAFF_ID
+		ORDER BY staffNm
+		]]>
+
+	</select>
+	
+	<select id="personnelDAO.selectPersonnelYearList1" parameterClass="personnelVO" resultClass="personnelVO">
+		<![CDATA[
+		  SELECT 
+			     STAFF_ID                          AS staffId
+		       , (SELECT USR_NM FROM IB_STAFF WHERE IB_STAFF.S_NB = STAFF_ID) AS staffNm
+			   , (EXTRACT(MONTH FROM TM_DT)+0)   AS tmDt
+			   , SUM(HOLIDAY)  AS holiday
+		    FROM  
+				 IB_PERSONNEL 
+		   WHERE 1=1
+		   	 AND FLAG_HT = #flagHt#
+		]]>
+            <isNotEmpty prepend="AND" property="choice_year">
+				<![CDATA[	IB_PERSONNEL.TM_DT between CONCAT (#choice_year#, #choice_monthS#, '00') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+		<![CDATA[
+		GROUP BY STAFF_ID, tmDt
+		ORDER BY staffNm, tmDt
+		]]>
+
+	</select>
+	
+	<select id="personnelDAO.selectPersonnelYearPassList" parameterClass="personnelVO" resultClass="personnelVO">
+		<![CDATA[
+		  SELECT 
+			     STAFF_ID                          AS staffId
+		       , (SELECT USR_NM FROM IB_STAFF WHERE IB_STAFF.S_NB = STAFF_ID) AS staffNm
+			   , (EXTRACT(MONTH FROM TM_DT)+0)   AS tmDt
+			   , SUM(HOLIDAY)  AS holiday
+		    FROM  
+				 IB_PERSONNEL 
+		   WHERE 1=1
+		   	 AND FLAG_HT = #flagHt#
+		]]>
+            <isNotEmpty prepend="AND" property="choice_year">
+				<![CDATA[	IB_PERSONNEL.TM_DT = CONCAT (#choice_year#, '00', '00') 		]]>
+			</isNotEmpty>
+		<![CDATA[
+		GROUP BY STAFF_ID, tmDt
+		ORDER BY staffNm, tmDt
+		]]>
+
+	</select>
+	
+	<select id="personnelDAO.selectPersonnelMonthList" parameterClass="personnelVO" resultClass="personnelVO">
+		<![CDATA[
+		  SELECT 
+			     STAFF_ID            AS staffId
+		       , (SELECT USR_NM FROM IB_STAFF WHERE IB_STAFF.S_NB = STAFF_ID) AS staffNm
+			   , GROUP_CONCAT(EXTRACT(DAY FROM TM_DT) ORDER BY TM_DT)  AS grDay
+			   , GROUP_CONCAT(HOLIDAY ORDER BY TM_DT)                  AS grHld
+		    FROM IB_PERSONNEL
+		   WHERE 1=1
+		   	 AND FLAG_HT = #flagHt#
+		]]>
+            <isNotEmpty prepend="AND" property="choice_year">
+				<![CDATA[	IB_PERSONNEL.TM_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+		<![CDATA[
+		GROUP BY STAFF_ID
+		ORDER BY staffNm
+		]]>
+	</select>
+	
+	<select id="personnelDAO.selectPersonnelMonthList1" parameterClass="personnelVO" resultClass="personnelVO">
+		<![CDATA[
+		  SELECT 
+			     STAFF_ID            AS staffId
+		       , (SELECT USR_NM FROM IB_STAFF WHERE IB_STAFF.S_NB = STAFF_ID) AS staffNm
+			   , EXTRACT(DAY FROM TM_DT)  AS tmDt
+			   , HOLIDAY                  AS holiday
+			   , PENALTY                  AS penalty
+		    FROM IB_PERSONNEL
+		   WHERE 1=1
+		   	 AND FLAG_HT = #flagHt#
+		]]>
+            <isNotEmpty prepend="AND" property="choice_year">
+				<![CDATA[	IB_PERSONNEL.TM_DT between CONCAT (#choice_year#, #choice_monthS#, '00') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+		<![CDATA[
+		GROUP BY STAFF_ID, tmDt
+		ORDER BY staffNm, tmDt
+		]]>
+	</select>
+	
+	<select id="personnelDAO.selectTotalTradiness" parameterClass="personnelVO" resultClass="personnelVO">
+		<![CDATA[
+		  SELECT 
+			     STAFF_ID            AS staffId
+		       , (SELECT USR_NM FROM IB_STAFF WHERE IB_STAFF.S_NB = STAFF_ID) AS staffNm
+			   , EXTRACT(DAY FROM TM_DT)  AS tmDt
+			   , SUM(1)                  AS holiday
+		    FROM IB_PERSONNEL
+		   WHERE 1=1
+		   	 AND FLAG_HT = #flagHt#
+		]]>
+            <isNotEmpty prepend="AND" property="choice_year">
+				<![CDATA[	IB_PERSONNEL.TM_DT between CONCAT (#choice_year#, '0100') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+		<![CDATA[
+		GROUP BY STAFF_ID
+		ORDER BY staffNm, tmDt
+		]]>
+	</select>
+
+	<select id="personnelDAO.selectTardinessList" parameterClass="personnelVO" resultClass="personnelVO">
+		<![CDATA[
+			SELECT 
+			    STAFF_ID AS staffId,
+			    B.USR_ID AS usrId,
+			    B.USR_NM AS usrNm,
+			    EXTRACT(MONTH FROM A.TM_DT) AS tmDt,
+			    SUM(1) AS holiday
+			FROM
+			    IB_PERSONNEL A
+			    LEFT JOIN IB_STAFF B ON B.S_NB = A.STAFF_ID
+			WHERE
+			    1 = 1 
+			    AND FLAG_HT = '1' 
+			    AND A.TM_DT between CONCAT(#choice_year#, '01', '00') and CONCAT(#choice_year#, '12', '31235959')
+			GROUP BY tmDt,STAFF_ID
+			ORDER BY usrNm , tmDt
+		]]>
+	</select>
+	
+	<select id="personnelDAO.selectCheckPersonnel" parameterClass="personnelVO" resultClass="Integer">
+		<![CDATA[
+		  SELECT 
+			      COUNT(1)
+			 FROM IB_PERSONNEL 
+			WHERE 1=1
+			  AND FLAG_HT = #flagHt#
+			  AND STAFF_ID   =  #staffId#
+			  AND TM_DT      =  #tmDt#
+		   	  
+		]]>
+	</select>
+ 
+
+	<insert id="personnelDAO.insertPersonnel">
+		<![CDATA[
+			INSERT INTO IB_PERSONNEL 
+				  ( TM_DT
+				  , STAFF_ID
+				  , HOLIDAY
+				  , PENALTY
+				  , FLAG_HT
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #tmDt#
+				  , #staffId#
+				  , #holiday#
+				  , #penalty#
+				  , #flagHt#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+	</insert>
+	
+	<update id="personnelDAO.updatePersonnel">
+		<![CDATA[
+			UPDATE IB_PERSONNEL 
+			SET 
+				  HOLIDAY    =  #holiday#
+				, PENALTY    =  #penalty#
+				, UP_DT      =  now()
+				, UP_ID      =  #rgId#
+			WHERE 1=1
+			  AND FLAG_HT    =  #flagHt#
+			  AND STAFF_ID   =  #staffId#
+			  AND TM_DT      =  #tmDt#
+		]]>
+	</update>
+	
+	<delete id="personnelDAO.deletePersonnel">
+		<![CDATA[
+			DELETE FROM IB_PERSONNEL 
+			WHERE 1=1
+			  AND FLAG_HT    =  #flagHt#
+			  AND STAFF_ID   =  #staffId#
+			  AND TM_DT      =  #tmDt#
+		]]>
+	</delete>
+
+	
+	<select id="personnelDAO.selectPersonnelLateList" parameterClass="personnelVO" resultClass="String">
+		<![CDATA[
+		  SELECT 
+			     HOLIDAY
+		    FROM  
+				 IB_PERSONNEL 
+		   WHERE 1=1
+		   	 AND FLAG_HT = #flagHt#
+		   	 AND STAFF_ID = #staffId#
+		]]>
+            <isNotEmpty prepend="AND" property="tmDt">
+				<![CDATA[	IB_PERSONNEL.TM_DT = #tmDt# 		]]>
+			</isNotEmpty>
+	</select>
+	
+	<select id="personnelDAO.selectPenaltyList" parameterClass="personnelVO" resultClass="personnelVO">
+		<![CDATA[
+			  SELECT
+			          STAFF_ID			as staffId
+			       ,  SUM(CASE WHEN HOLIDAY = '0.5' THEN 1 END)		as tmpNum1
+			       ,  SUM(CASE WHEN HOLIDAY = '1' THEN 1 END) 		as holiday
+			    FROM  IB_PERSONNEL
+			   WHERE  PENALTY = 'Y'
+		]]>
+	</select>
+	
+</sqlMap>

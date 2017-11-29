@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="recommend">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="workVO" type="ib.work.service.WorkVO"/>
+	<typeAlias  alias="recommendVO" type="ib.recommend.service.RecommendVO"/>
+
+	<select id="recommendDAO.selectIBlist" parameterClass="recommendVO" resultClass="recommendVO">
+		<![CDATA[
+			SELECT
+					DATE(S.TM_DT)			as  tmDt
+					, S.S_NB				as  offerSnb
+					, T.S_NB				as  sNb
+					, S.CPN_ID				as  cpnId
+					, T.CPN_NM				as  cpnNm
+					, S.CATEGORY_CD			as  categoryCd
+					, S.RG_NM				as  rgNm
+					, S.PRICE				as  price
+					, S.INVEST_PRICE				as  investPrice
+					, S.PROGRESS_CD			as  progressCd
+					, S.RCMD_PROPOSER		as  rcmdProposer
+					, S.RCMD_RESULT			as  result
+					, S.SUB_MEMO			as  subMemo
+					, S.OPINION				as  investOpinion
+					, J1.analysis					as analysis
+
+					, (SELECT COUNT(S_NB)
+					 	 FROM IB_RECOMMEND_OPINION
+						WHERE CATEGORY = '00001' AND OFFER_SNB = S.S_NB) 					as opinion
+						
+					, (SELECT GROUP_CONCAT(DISTINCT b.s_nb
+                              , '^', b.cst_nm
+                              , '^', b.position
+                              , '^', b.cpn_id
+                              , '^', c.cpn_nm
+                              ]]><!-- ORDER BY (SELECT COUNT(CASE WHEN (MIDDLE_OFFER_CD = '00001' or MIDDLE_OFFER_CD = '00002') THEN 1 END) FROM IB_OFFER WHERE CST_ID = A.CST_ID) DESC --><![CDATA[
+                              SEPARATOR ',') ibinfo
+				          FROM (
+				                SELECT 1 AS gubun
+				                     , cpn_id
+				                     , cst_id
+				                  FROM ib_offer
+				                 UNION ALL
+				                SELECT 2
+				                     , s_nb_2nd
+				                     , s_nb_1st
+				                  FROM ib_cst_deal_info
+				                ) a
+				          inner JOIN ib_customer b
+				            ON a.cst_id = b.s_nb
+				          inner JOIN ib_company  c
+				            ON b.cpn_id = c.cpn_id
+	        			 WHERE a.cpn_id = CASE a.gubun
+	                          WHEN 1 THEN s.cpn_id
+	                          WHEN 2 THEN t.s_nb
+	                           END
+	          			  AND c.cpn_nm LIKE '%증권%' 
+	        			) 												as ibInfo
+	        			
+					, (SELECT GROUP_CONCAT(OFFER_S_NB
+                              , '^', REAL_NAME
+                              , '^', MAKE_NAME
+                              SEPARATOR ',') file
+				          FROM IB_FILE_INFO
+				         WHERE FILE_CATEGORY = '00000'
+				           AND s.S_NB = OFFER_S_NB
+			           ) 												as realNm
+        			
+		  FROM ib_offer s
+		  LEFT JOIN ib_company t
+		    ON s.cpn_id = t.cpn_id
+		  LEFT OUTER JOIN (
+		          SELECT A.CPN_ID
+		               , COUNT(CASE WHEN A.OFFER_CD = '00004' THEN 1 END) analysis
+		            FROM IB_OFFER A
+		        GROUP BY A.CPN_ID
+		     ) J1 ON S.CPN_ID = J1.CPN_ID 
+		     
+
+  			 WHERE	S.OFFER_CD = #offerCd#
+		]]>
+            <isNotEmpty prepend="AND" property="choice_month">
+				<![CDATA[	S.TM_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+			<isEqual prepend="AND" property="total" compareValue="">
+				<![CDATA[	S.PROGRESS_CD != '10000'		]]>
+			</isEqual>
+ 		  ORDER BY	S.PROGRESS_CD
+			<isEqual prepend="," property="sorting" compareValue=""><![CDATA[	S.TM_DT DESC		]]></isEqual>
+			<isEqual prepend="," property="sorting" compareValue="3"><![CDATA[	rgNm ASC 			]]></isEqual>
+			<isEqual prepend="," property="sorting" compareValue="4"><![CDATA[	cpnNm ASC 			]]></isEqual>
+			<isEqual prepend="," property="sorting" compareValue="5"><![CDATA[	categoryCd ASC 		]]></isEqual> 		  
+	</select>
+
+	
+	<select id="recommendDAO.selectRecommendInfo" parameterClass="recommendVO" resultClass="recommendVO">
+			SELECT
+					  A.S_NB			as sNb
+					, A.CPN_ID 			as cpnId
+					, B.CPN_NM 			as cpnNm
+					, B.S_NB 			as cpnSnb
+					
+					, B.CATEGORY_BUSINESS as categoryBusiness			<!-- 업종 		-->
+					, B.MAJOR_PRODUCT 	as majorProduct					<!-- 주요품목 	-->
+					, (CASE WHEN E.CEO IS NULL THEN E2.CEO ELSE E.CEO END)					as ceo			<!-- 대표이사	-->
+					, (CASE WHEN E.CEO IS NULL THEN E2.StockValue ELSE E.StockValue END)	as stockValue	<!-- 시가총액	-->
+					, (CASE WHEN E.CEO IS NULL THEN E2.UnitPrice ELSE E.UnitPrice END)		as unitPrice	<!-- 주가		-->
+					
+					, A.OFFER_CD		as offerCd
+					, A.MIDDLE_OFFER_CD		as middleOfferCd
+					, A.MEMO			as memo
+					, A.INVEST_PRICE	as investPrice
+					, A.OPINION			as investOpinion
+					, A.PRICE 			as price
+					, A.CPN_TYPE		as cpnType
+					, A.SELL_BUY		as sellBuy
+					, A.CPN_TYPE_CD		as cpnTypeCd
+					, A.CATEGORY_CD		as categoryCd
+					, A.PROGRESS_CD		as progressCd
+					, LEFT(A.INVEST_DT, 10)	AS investDt
+					, C.CST_NM			as cstNm
+					, A.CST_ID			AS cstId
+					, D.CPN_NM			as cstCpnNm
+					, A.RG_NM			as rgNm
+					, A.TM_DT			as tmDt
+					, A.DUE_DT			as dueDt
+					, A.RG_DT			as rgDt
+					, (SELECT GROUP_CONCAT(OFFER_S_NB
+                              , '^', REAL_NAME
+                              , '^', MAKE_NAME
+                              SEPARATOR ',') file
+				          FROM IB_FILE_INFO
+				         WHERE FILE_CATEGORY = '00000'
+				           AND A.S_NB = OFFER_S_NB
+			           ) 									as realNm
+			           
+			        , A.RG_ID			as rgId
+			       	, (SELECT PHN_1 FROM IB_STAFF WHERE USR_ID = A.RG_ID)	as rgStaffPhn1
+			       	, (SELECT DEAL_SMS FROM IB_STAFF WHERE USR_ID = A.RG_ID)	as dealSms
+			        , A.INFO_LEVEL		as infoLevel
+			        
+			        , IF(SUBSTRING(B.A_CPN_ID,1,1) = 'A', 'A', 'N')		as cpnStts
+			        , B.A_CPN_ID										as aCpnId
+			        
+			        , A.RECOMMEND_SNB									as rcmdProposer
+			        , IF(A.RECOMMEND_SNB != 0, (SELECT RG_NM FROM IB_OFFER WHERE S_NB = A.RECOMMEND_SNB),'')	as rcmdProposerNm
+			        
+			 FROM  IB_OFFER A
+		LEFT JOIN  IB_COMPANY B ON A.CPN_ID = B.CPN_ID
+		LEFT JOIN  IB_CUSTOMER C ON A.CST_ID = C.S_NB
+		LEFT JOIN  IB_COMPANY D ON C.CPN_ID = D.CPN_ID
+		
+		LEFT JOIN (
+					SELECT comcd, CEO, FORMAT(StockValue, 0) AS StockValue, FORMAT(UnitPrice, 0) UnitPrice
+					  FROM CompanyInfo a LEFT OUTER JOIN CS_Cate_Price b ON a.ComCd = b.CateCd
+					  													AND b.DelFlag = 'N'
+					  													AND b.PriceDate = (SELECT MAX(PriceDate) FROM CS_Cate_Price WHERE CateCd = (SELECT MIN(CateCd) FROM CS_Cate WHERE CateType = '1' AND SubCateCd = '2'))
+					 WHERE a.DelFlag = 'N'
+					   AND a.ComCd = (SELECT CPN_ID FROM IB_OFFER WHERE S_NB = #sNb#)
+					   
+					) E ON E.comcd = B.CPN_ID
+		
+		LEFT JOIN (
+					SELECT comcd, CEO, FORMAT(StockValue, 0) AS StockValue, FORMAT(UnitPrice, 0) UnitPrice							 
+					  FROM CompanyInfo a LEFT OUTER JOIN CS_Cate_Price b ON a.ComCd = b.CateCd
+					  													AND b.DelFlag = 'N'
+					  													AND b.PriceDate = (SELECT MAX(PriceDate) FROM CS_Cate_Price WHERE CateCd = (SELECT MIN(CateCd) FROM CS_Cate WHERE CateType = '1' AND SubCateCd = '2'))
+					 WHERE a.DelFlag = 'N'
+					   AND a.ComCd = (SELECT A_CPN_ID FROM IB_COMPANY WHERE CPN_ID = (SELECT CPN_ID FROM IB_OFFER WHERE S_NB = #sNb#)) 
+					 
+					) E2 ON E2.comcd = B.A_CPN_ID
+		
+			WHERE  A.S_NB = #sNb#
+	</select>
+	
+	<select id="recommendDAO.selectOpinionList" parameterClass="recommendVO" resultClass="recommendVO">
+		<![CDATA[
+			SELECT
+					G.S_NB				as sNb
+					, G.OFFER_SNB		as offerSnb
+					, G.OPINION			as opinion
+					, G.COMMENT			as comment
+					, H.USR_NM			as cstNm
+					, G.RG_DT			as rgDt
+					, G.RG_ID			as rgId
+					
+					, (SELECT GROUP_CONCAT(OFFER_S_NB
+                              , '^', REAL_NAME
+                              , '^', MAKE_NAME
+                              SEPARATOR ',') file
+				          FROM IB_FILE_INFO
+				         WHERE FILE_CATEGORY = '00002'
+				           AND G.S_NB = OFFER_S_NB
+			           ) 				as realNm
+			 FROM  IB_RECOMMEND_OPINION G
+			 left JOIN  IB_STAFF H on G.RG_ID = H.USR_ID
+			 
+			WHERE  G.CATEGORY = #categoryCd#
+			  AND  G.OFFER_SNB = #sNb#
+		  ORDER BY g.opinion asc, G.RG_DT DESC
+		]]>
+	</select>	
+	
+	<select id="recommendDAO.selectMaxOpinionSnb" parameterClass="recommendVO" resultClass="recommendVO">
+		<![CDATA[
+			SELECT
+					MAX(G.S_NB)				as sNb
+			 FROM  IB_RECOMMEND_OPINION G
+			WHERE  G.CATEGORY = '00001'
+			  AND  G.RG_ID = #rgId#
+		]]>
+	</select>
+
+		
+	<update id="recommendDAO.updateResult">
+		<![CDATA[
+			UPDATE IB_OFFER
+			SET 
+				  UP_ID         =  #rgId#
+				, UP_DT         =  now()
+				]]><isNotEmpty property="result"><![CDATA[
+				, RCMD_RESULT   =  #result#
+				]]></isNotEmpty><isNotEmpty property="price"><![CDATA[
+				, PRICE         =  #price#
+				]]></isNotEmpty><isNotEmpty property="rcmdProposer"><![CDATA[
+				, RCMD_PROPOSER =  #rcmdProposer#
+				]]></isNotEmpty><isNotEmpty property="progressCd"><![CDATA[
+				, PROGRESS_CD   =  #progressCd#
+				]]></isNotEmpty><![CDATA[
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	
+	<insert id="recommendDAO.insertRecommendOpinion" parameterClass="recommendVO">
+			INSERT INTO IB_RECOMMEND_OPINION
+				  ( OFFER_SNB
+				  , OPINION
+				  , COMMENT
+				  , CATEGORY
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #offerSnb#
+		 		  , #opinion#
+				  , #comment#
+				  , #categoryCd#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		<selectKey keyProperty="sNb" resultClass="string">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<update id="recommendDAO.updatecomment">
+		<![CDATA[
+			UPDATE IB_RECOMMEND_OPINION
+			SET 
+				  UP_ID         =  #rgId#
+				, UP_DT         =  now()
+				, OPINION       =  #opinion#
+				, COMMENT       =  #comment#
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+
+	<delete id="recommendDAO.deleteRecommendOpinion">
+		<![CDATA[
+			DELETE FROM IB_RECOMMEND_OPINION 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+
+	<!-- 추천종목 을 가지고 제안중 딜 등록 -->
+	<insert id="recommend.insertPropDeal" parameterClass="HashMap">
+		INSERT INTO IB_OFFER(MIDDLE_OFFER_CD
+							, OFFER_CD
+							, ENTRUST
+							, TM_DT
+							, RG_NM
+							, CPN_CST
+							, CST_ID
+							, CPN_ID
+							, CATEGORY_CD
+							, PRICE
+							, INVEST_PRICE
+							, MEMO
+							, RG_DT
+							, RG_ID
+							, UP_DT
+							, UP_ID
+							, RECOMMEND_SNB
+							, SELL_BUY
+							, CPN_TYPE_CD)
+							
+					  SELECT  '00005'					<!-- 딜제안중(직접발굴) -->
+						 	, '00000'
+						 	, ''
+						 	, NOW()
+						 	, A.RCMD_PROPOSER
+						 	, A.CPN_CST
+						 	, #cstId#					<!-- 중개인 -->
+						 	, A.CPN_ID
+						 	, #category#
+						 	, #dealPrice#
+						 	, A.INVEST_PRICE
+						 	, #memo#
+						 	, NOW()
+						 	, (SELECT USR_ID FROM IB_STAFF WHERE USR_NM = A.RCMD_PROPOSER)
+						 	, NOW()
+						 	, (SELECT USR_ID FROM IB_STAFF WHERE USR_NM = A.RCMD_PROPOSER)
+						 	, #sNb#
+						 	, A.SELL_BUY
+						 	, '00009'
+		              FROM IB_OFFER	A
+		            WHERE S_NB = #sNb#
+		            
+			<selectKey keyProperty="s" resultClass="String">
+				SELECT LAST_INSERT_ID()
+			</selectKey>
+		/* recommend.insertPropDeal */
+	</insert>
+	
+	
+	<update id="recommend.updateRcmdDealStts"  parameterClass="HashMap">
+		UPDATE IB_OFFER
+		   SET PROGRESS_CD = '00003'		<!-- 딜제안(구, 성사) -->
+			  ,UP_DT = NOW()
+		      ,UP_ID = #usrId#
+		       
+		 WHERE OFFER_CD = '00013'			<!-- 추천 -->
+		   AND S_NB = #sNb#
+		 
+		/* recommend.updateRcmdDealStts */
+	</update>
+	
+	
+	<select id="recommend.selectRcmdDealInfo" parameterClass="recommendVO" resultClass="recommendVO">
+		SELECT  A.RG_NM			as rgNm
+			  , A.MEMO			as memo
+			  , A.OPINION		as opinion
+			  , A.RG_DT			as rgDt
+			  , (SELECT CPN_NM FROM IB_COMPANY WHERE CPN_ID = A.CPN_ID) as cpnNm
+		
+			  , (SELECT GROUP_CONCAT(OFFER_S_NB
+                              , '^', REAL_NAME
+                              , '^', MAKE_NAME
+                              SEPARATOR ',') file
+				          FROM IB_FILE_INFO
+				         WHERE FILE_CATEGORY = '00000'
+				           AND A.S_NB = OFFER_S_NB
+			           ) 									as realNm
+		
+		  FROM IB_OFFER		A
+		 WHERE A.S_NB = (
+					 	SELECT (CASE WHEN RECOMMEND_SNB = 0 THEN NULL ELSE RECOMMEND_SNB END)	  
+						  FROM IB_OFFER		  
+						 WHERE S_NB = #sNb#
+					 )
+		/* recommend.selectRcmdDealInfo */
+	</select>	
+	
+	
+	<!-- 딜 분석자 지정 -->
+	<insert id="recommend.insertAnalyUser" parameterClass="HashMap">
+		INSERT INTO BASE.BS_ANAL_USER(
+										  OFFER_ID
+										, USER_ID
+										, DELETE_FLAG
+										
+										
+										, CREATED_BY
+										, CREATE_DATE
+										, UPDATED_BY
+										, UPDATE_DATE
+									
+								)VALUES	(
+								
+										  #offerId#
+										, #userId#
+										, 'N'
+										
+										, #rgId#
+										, NOW()
+										, #rgId#
+										, NOW()	
+								
+								)
+										
+								 
+					            
+			<selectKey keyProperty="s" resultClass="String">
+				SELECT LAST_INSERT_ID()
+			</selectKey>
+		
+		/* recommend.insertAnalyUser */
+	</insert>
+	
+	<!-- 분석 담당자 로 지정된 직원 리스트 -->
+	<select id="recommend.getAnalyUserList" parameterClass="HashMap" resultClass="HashMap">
+	
+		SELECT    
+				  ANAL_USER_ID		AS analUserId
+				, OFFER_ID			AS offerId
+				, analy.USER_ID		AS userId
+				, staff.USR_NM		AS userNm
+				, staff.POSITION	AS positionCd
+				, (SELECT positionNm FROM erp.erp_per_position where positionCd = staff.POSITION) AS position
+				, DELETE_FLAG		AS deleteFlag
+				
+				, CREATED_BY		AS createdBy
+				, (SELECT USR_NM FROM synergymain.IB_STAFF WHERE S_NB = analy.CREATED_BY) AS createdNm
+				, CREATE_DATE		AS createDate
+				, UPDATED_BY		AS updatedBy
+				, UPDATE_DATE		AS updateDate
+				
+				, IFNULL((	
+							SELECT COUNT(*)
+							  FROM IB_OFFER A
+		        			  LEFT JOIN IB_OFFER_INFO K ON K.OFFER_SNB = A.S_NB AND K.CATEGORY = '00008'
+							
+							 WHERE 1 = 1
+						       AND A.TM_DT BETWEEN DATE(DATE_ADD(#tmDt#, INTERVAL - 7 DAY)) AND DATE(DATE_ADD(#tmDt#, INTERVAL 100 DAY))
+						       AND A.CPN_ID = #cpnId#
+						       AND A.OFFER_CD IN ('00002','00003','00004','00005')
+						       AND A.RG_ID = staff.USR_ID 
+						       AND K.S_NB IS NOT NULL
+							
+				 ),0) AS analCount
+				 
+				, IFNULL((	
+							SELECT STAR
+							  FROM IB_OFFER A
+		        			  LEFT JOIN IB_OFFER_INFO K ON K.OFFER_SNB = A.S_NB AND K.CATEGORY = '00008'
+							
+							 WHERE 1 = 1
+						       AND A.TM_DT BETWEEN DATE(DATE_ADD(#tmDt#, INTERVAL - 7 DAY)) AND DATE(DATE_ADD(#tmDt#, INTERVAL 100 DAY))
+						       AND A.CPN_ID = #cpnId#
+						       AND A.OFFER_CD IN ('00002','00003','00004','00005')
+						       AND A.RG_ID = staff.USR_ID 
+						       AND K.S_NB IS NOT NULL
+						       
+						       ORDER BY K.RG_DT DESC LIMIT 1
+							
+				 ),0) AS analPoint
+				
+				
+		FROM  BASE.BS_ANAL_USER 	AS analy
+		LEFT OUTER JOIN IB_STAFF AS staff ON  analy.USER_ID = staff.S_NB
+		
+		WHERE analy.OFFER_ID = #offerId# AND analy.DELETE_FLAG = 'N'
+		
+		ORDER BY analy.CREATE_DATE ASC
+	
+	
+	/* recommendDAO.getAnalyUserList */
+	</select>
+	
+	
+	<!-- 분석자 삭제 -->
+	<update id="recommend.deleteAnalyUser" parameterClass="HashMap">
+		UPDATE BASE.BS_ANAL_USER SET 
+				  DELETE_FLAG ='Y'
+				, DELETED_BY = #rgId#
+				, DELETE_DATE = NOW()
+				
+		WHERE ANAL_USER_ID = #analUserId#		
+	
+	</update>
+
+</sqlMap>

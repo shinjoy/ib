@@ -1,0 +1,676 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="Admin">
+	<typeAlias alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias alias="cusVO2" type="ib.schedule.service.CusVO"/>
+	<typeAlias alias="spCmmVO" type="ib.schedule.service.SpCmmVO"/>
+	
+	<!-- 최근 분석&탐방 정보 -->
+	<resultMap id="VisitAnalInfo" class="ib.schedule.service.CusVO">
+		<result property="S_Nb"			column="S_Nb"/>
+		<result property="ComCd"		column="ComCd"/>
+		<result property="ComNm"		column="ComNm"/>
+		<result property="Memo"			column="Memo"/>
+		<result property="FilePath"		column="FilePath"/>
+		<result property="FileUpNm"		column="FileUpNm"/>
+		<result property="FileNm"		column="FileNm"/>
+		<result property="FileFlag"		column="FileFlag"/>
+		<result property="OfferType"	column="OfferType"/>
+		<result property="RegDate"		column="RegDate"/>
+		<result property="RegPerNm"		column="RegPerNm"/>
+	</resultMap>
+	
+																<!--	관리자	-->
+	<!-- 부서 리스트 받아오기 -->
+	<select id="adminDAO.GetDeptList" resultClass="egovMap">
+		SELECT DeptSeq
+			 , DeptNm
+			 , manager
+			 , (SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = manager) managerNm
+			 , TeamLeaderSabun
+			 , (SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = TeamLeaderSabun) TeamLeaderNm
+			 , DeptOrder
+			  
+		  FROM erp.ERP_Per_Dept
+		 WHERE DelFlag = 'N'
+		 ORDER BY DeptOrder
+	</select>
+	
+	<!-- 회사 리스트 받아오기 -->
+	<select id="adminDAO.getCompanyList" resultClass="egovMap">
+		SELECT hq_id 		AS hqId
+			  ,company_id	AS companyId
+			  ,hq_name	 	AS hqName
+			  ,ceo_id		AS ceoId
+				
+		  FROM base.bs_company_hq
+		 ORDER BY hq_id ASC;
+	</select>
+	<!-- 부서 등록 완료 -->
+	<insert id="adminDAO.DeptAddEnd">
+		INSERT INTO erp.ERP_Per_Dept(
+									DeptNm
+								  , DeptOrder
+								  , manager
+								  , TeamLeaderSabun
+								  , RegDate
+								  , RegPerSabun
+								  , DelFlag
+								  )
+							VALUES(
+									#DeptNm#
+								  , #DeptOrder#
+								  , #manager#
+								  , #TeamLeaderSabun#
+								  , NOW()
+								  , #RegPerSabun#
+								  , 'N')
+		<selectKey resultClass="string">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<!-- 부서 수정&삭제 완료 -->
+	<update id="adminDAO.DeptEditEnd">
+		UPDATE erp.ERP_Per_Dept
+			SET 
+			<isEqual property="ProcType" compareValue="Edit">
+				DeptNm = #DeptNm#
+			  , DeptOrder = #DeptOrder#
+			  , manager = #manager#
+			  , TeamLeaderSabun = #TeamLeaderSabun#
+			  ,	EditDate = NOW()
+			  , EditPerSabun = #RegPerSabun#
+			</isEqual>
+			<isEqual property="ProcType" compareValue="Del">
+				DelFlag = 'Y'
+			  , DelDate = NOW()
+			  , DelPerSabun = #RegPerSabun#
+			</isEqual>
+		WHERE DeptSeq = #DeptSeq#
+	</update>
+	
+	<!-- 부서 수정&삭제에 따른 출력순서 업데이트 -->
+	<update id="adminDAO.DeptOrderEditEnd">
+		UPDATE erp.ERP_Per_Dept
+			<isEqual property="ProcType" compareValue="Add">SET DeptOrder = (DeptOrder + 1)</isEqual>
+			<isEqual property="ProcType" compareValue="Edit">
+				<isEqual property="EventType" compareValue="Up">SET DeptOrder = (DeptOrder + 1)</isEqual>
+				<isEqual property="EventType" compareValue="Down">SET DeptOrder = (DeptOrder - 1)</isEqual>
+			</isEqual>
+			<isEqual property="ProcType" compareValue="Del">SET DeptOrder = (DeptOrder - 1)</isEqual>
+		WHERE DelFlag = 'N'
+		
+		<isEqual property="ProcType" compareValue="Add">
+			AND DeptOrder <![CDATA[>=]]> #DeptOrder# AND DeptOrder <![CDATA[<]]> #OrderLog#
+		</isEqual>
+		<isEqual property="ProcType" compareValue="Edit">
+			<isEqual property="EventType" compareValue="Up">
+				AND DeptOrder <![CDATA[>=]]> #DeptOrder# AND DeptOrder <![CDATA[<]]> #OrderLog#
+			</isEqual>
+			<isEqual property="EventType" compareValue="Down">
+				AND DeptOrder <![CDATA[>]]> #OrderLog# AND DeptOrder <![CDATA[<=]]> #DeptOrder#
+			</isEqual>
+		</isEqual>
+		<isEqual property="ProcType" compareValue="Del">
+			AND DeptOrder <![CDATA[>]]> #DeptOrder#
+		</isEqual>
+	</update>
+	
+	<!-- 직책 리스트 받아오기 -->
+	<select id="adminDAO.GetPositionList" resultClass="egovMap">
+		SELECT PositionCd, PositionNm, PositionOrder FROM erp.ERP_Per_Position WHERE DelFlag = 'N' ORDER BY PositionOrder
+	</select>
+	
+	<!-- 직책 등록 완료 -->
+	<insert id="adminDAO.PositionAddEnd">
+		INSERT INTO erp.ERP_Per_Position(PositionNm, PositionOrder, RegDate, RegPerSabun, DelFlag)
+			VALUES(#PositionNm#, #PositionOrder#, NOW(), #RegPerSabun#, 'N')
+		<selectKey resultClass="string">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<!-- 직책 수정&삭제 완료 -->
+	<update id="adminDAO.PositionEditEnd">
+		UPDATE erp.ERP_Per_Position
+			SET PositionNm = #PositionNm#, PositionOrder = #PositionOrder#,
+			<isEqual property="ProcType" compareValue="Edit">EditDate = NOW(), EditPerSabun = #RegPerSabun#</isEqual>
+			<isEqual property="ProcType" compareValue="Del">DelFlag = 'Y', DelDate = NOW(), DelPerSabun = #RegPerSabun#</isEqual>
+		WHERE PositionCd = #PositionCd#
+	</update>
+	
+	<!-- 직책 수정&삭제에 따른 출력순서 업데이트 -->
+	<update id="adminDAO.PositionOrderEditEnd">
+		UPDATE erp.ERP_Per_Position
+			<isEqual property="ProcType" compareValue="Add">SET PositionOrder = (PositionOrder + 1)</isEqual>
+			<isEqual property="ProcType" compareValue="Edit">
+				<isEqual property="EventType" compareValue="Up">SET PositionOrder = (PositionOrder + 1)</isEqual>
+				<isEqual property="EventType" compareValue="Down">SET PositionOrder = (PositionOrder - 1)</isEqual>
+			</isEqual>
+			<isEqual property="ProcType" compareValue="Del">SET PositionOrder = (PositionOrder - 1)</isEqual>
+		WHERE DelFlag = 'N'
+		
+		<isEqual property="ProcType" compareValue="Add">
+			AND PositionOrder <![CDATA[>=]]> #PositionOrder# AND PositionOrder <![CDATA[<]]> #OrderLog#
+		</isEqual>
+		<isEqual property="ProcType" compareValue="Edit">
+			<isEqual property="EventType" compareValue="Up">
+				AND PositionOrder <![CDATA[>=]]> #PositionOrder# AND PositionOrder <![CDATA[<]]> #OrderLog#
+			</isEqual>
+			<isEqual property="EventType" compareValue="Down">
+				AND PositionOrder <![CDATA[>]]> #OrderLog# AND PositionOrder <![CDATA[<=]]> #PositionOrder#
+			</isEqual>
+		</isEqual>
+		<isEqual property="ProcType" compareValue="Del">
+			AND PositionOrder <![CDATA[>]]> #PositionOrder#
+		</isEqual>
+	</update>
+																<!--	관리자	-->
+
+																<!-- 	시가	 	-->
+	<!-- 시가 등록 위한 시가코드 받아오기 -->
+	<select id="adminDAO.GetPriceSeq" parameterClass="cusVO2" resultClass="String">
+		SELECT IFNULL(LPAD(MAX(PriceSeq) + 1, 12, 0), '000000000001') PriceSeq FROM CS_Cate_Price WHERE CateCd = #CateCd#
+	</select>
+	
+	<!-- 시가 개별 등록 완료 -->
+	<insert id="adminDAO.AlonePriceAddEnd">
+		INSERT INTO CS_Cate_Price (CateCd, PriceSeq, PriceDate, UnitPrice, RegDate, RegPerSabun, DelFlag)
+		VALUES (#CateCd#, #PriceSeq#, #PriceDate#, REPLACE(#UnitPrice#, ',', ''), NOW(), #RegPerSabun#, 'N')
+	</insert>
+	
+	<!-- 시가 리스트 받아오기 (유가증권에 해당되는 모든 종목을 불러오며 가장 최근에 등록된 데이터를 불러온다) -->
+	<select id="adminDAO.GetPriceList" parameterClass="cusVO2" resultClass="egovMap">
+		SELECT ComCd, ComNm, a.CateCd, CateNm, SubCateCd, SubCateNm, CateType, UpFlag, CASE UpFlag WHEN 'Y' THEN '상장' WHEN 'N' THEN '비상장' ELSE '' END UpFlagNm,
+			PriceDate, FORMAT(UnitPrice, 0) UnitPrice
+		FROM
+		    (SELECT ComCd, ComNm, CateCd, CateNm, SubCateCd, SubCateNm, CateType, UpFlag, DelFlag FROM CS_Cate) a
+		        LEFT OUTER JOIN
+		    (SELECT maxdata.CateCd, maxdata.PriceDate, UnitPrice FROM CS_Cate_Price main,
+				(SELECT CateCd, MAX(PriceDate) PriceDate FROM CS_Cate_Price WHERE DelFlag = 'N' AND PriceDate <![CDATA[<=]]> #SelDate# GROUP BY CateCd) maxdata
+		    WHERE main.CateCd = maxdata.CateCd AND main.PriceDate = maxdata.PriceDate) b ON a.CateCd = b.CateCd
+		WHERE a.CateType = '1' AND a.DelFlag = 'N'
+		<isNotEqual property="UpFlag" compareValue="All">AND UpFlag = #UpFlag#</isNotEqual>
+		<isNotEmpty property="searchCondition">
+			<isNotEqual property="searchCondition" compareValue="FULL">AND SubCateCd = #searchCondition#</isNotEqual>
+		</isNotEmpty>
+		<isEmpty property="OrderKey">ORDER BY SubCateCd</isEmpty>
+		<isNotEmpty property="OrderKey">
+			<isEqual property="OrderFlag" compareValue="S">ORDER BY $OrderKey$ $OrderType$</isEqual>
+			<isNotEqual property="OrderFlag" compareValue="S">ORDER BY $OrderKey$+0 $OrderType$</isNotEqual>
+		</isNotEmpty>
+	</select>
+	
+	<!-- 시가 등록을 위한 유가증권 종목 리스트 받아오기 -->
+	<select id="adminDAO.GetPriceAddList" parameterClass="cusVO2" resultClass="egovMap">
+		SELECT ComCd, ComNm, CateCd, CateNm, SubCateCd, SubCateNm, CateType, UpFlag, CASE UpFlag WHEN 'Y' THEN '상장' WHEN 'N' THEN '비상장' ELSE '' END UpFlagNm,
+		    PriceSeq, LastPriceSeq, PriceDate, UnitPrice
+		FROM
+		    (SELECT ComCd, ComNm, CateCd, CateNm, SubCateCd, SubCateNm, CateType, UpFlag,
+		            IFNULL(LPAD(MAX(PriceSeq) + 1, 12, 0), '000000000001') PriceSeq,
+		            IFNULL(PriceSeq, '000000000001') LastPriceSeq, IFNULL(PriceDate, '') PriceDate, FORMAT(IFNULL(UnitPrice, ''), 0) UnitPrice
+		    FROM
+		        (SELECT ComCd, ComNm, a.CateCd, a.CateNm, a.SubCateCd, a.SubCateNm, a.CateType, UpFlag,
+		            (SELECT MAX(PriceSeq) FROM CS_Cate_Price WHERE CateCd = b.CateCd GROUP BY CateCd) PriceSeq,
+		            b.PriceDate, b.UnitPrice
+		    FROM CS_Cate a
+		    LEFT OUTER JOIN 
+				(SELECT maxdata.CateCd, maxdata.PriceDate, UnitPrice FROM CS_Cate_Price main,
+				(SELECT CateCd, MAX(PriceDate) PriceDate FROM CS_Cate_Price WHERE DelFlag = 'N'
+					<isNotEmpty property="SelDate">AND PriceDate <![CDATA[<=]]> #SelDate#</isNotEmpty>
+					GROUP BY CateCd) maxdata
+		    WHERE main.CateCd = maxdata.CateCd AND main.PriceDate = maxdata.PriceDate) b ON a.CateCd = b.Catecd
+		    WHERE a.CateType = '1' AND (UpFlag = 'Y' OR SubCateCd = '2')
+		    <isEmpty property="SubCateCd">AND a.DelFlag = 'N' AND SubCateCd != '2'</isEmpty>
+		    <isNotEmpty property="SubCateCd">AND SubCateCd = '2'</isNotEmpty>
+		    ) AS PriceAddListTmp
+		    GROUP BY CateCd) AS PriceAddList
+		<isNotEmpty property="searchCondition">
+			<isNotEqual property="searchCondition" compareValue="FULL">WHERE SubCateCd = #searchCondition#</isNotEqual>
+		</isNotEmpty>
+		ORDER BY SubCateCd, CateNm
+	</select>
+	
+	<!-- 미등록된 종목 자동 업데이트 -->
+	<insert id="adminDAO.AutoCateAddEnd" parameterClass="java.util.List">
+		INSERT INTO CS_Cate (ComCd, ComNm, CateCd, CateNm,
+			CateType, CateTypeNm, SubCateCd, SubCateNm,
+			RegDate, RegPerSabun, DelFlag) VALUES
+        <dynamic>
+		<iterate conjunction=",">
+			(#[].ComCd#, #[].ComNm#, #[].ComCd#, CONCAT(#[].ComNm#, ' (주식)'),
+			'1', '유가증권', '2', '주식',
+			NOW(), #[].RegPerSabun#, 'N')
+		</iterate>
+		</dynamic>
+		ON DUPLICATE KEY UPDATE ComNm = VALUES(ComNm), CateNm = VALUES(CateNm), CateTypeNm = VALUES(CateTypeNm), SubCateCd = VALUES(SubCateCd), SubCateNm = VALUES(SubCateNm), EditDate = NOW(), EditPerSabun = VALUES(RegPerSabun)
+	</insert>
+	
+	<!-- 시가 등록 완료 -->
+	<insert id="adminDAO.PriceAddEnd" parameterClass="java.util.List">
+		INSERT INTO CS_Cate_Price (CateCd, PriceSeq, PriceDate,
+			UnitPrice, PublicStock, StockValue, OwnStock, FaceValue,
+			RegDate, RegPerSabun, DelFlag) VALUES
+        <dynamic>
+		<iterate conjunction=",">
+			(#[].CateCd#, IFNULL(#[].PriceSeq#, '000000000001'), #[].PriceDate#,
+			REPLACE(#[].UnitPrice#, ',', ''), REPLACE(#[].PublicStock#, ',', ''), REPLACE(#[].StockValue#, ',', ''), REPLACE(#[].OwnStock#, ',', ''), REPLACE(#[].FaceValue#, ',', ''),
+			NOW(), #[].RegPerSabun#, 'N')
+		</iterate>
+		</dynamic>
+		ON DUPLICATE KEY UPDATE UnitPrice = VALUES(UnitPrice), PublicStock = VALUES(PublicStock), StockValue = VALUES(StockValue), OwnStock = VALUES(OwnStock), FaceValue = VALUES(FaceValue), EditDate = NOW(), EditPerSabun = VALUES(RegPerSabun)
+	</insert>
+	
+	
+	<!-- 시가 등록 완료(한건씩 등록) -->
+	<insert id="adminDAO.PriceAddEndOneByOne" parameterClass="HashMap">
+		INSERT INTO CS_Cate_Price (CateCd, PriceSeq, PriceDate,	UnitPrice, PublicStock
+								 , StockValue, OwnStock, FaceValue
+								 , RegDate, RegPerSabun, DelFlag)
+						   VALUES
+        						(
+									#CateCd#, IFNULL(#PriceSeq#, '000000000001'), #PriceDate#
+									, REPLACE(#UnitPrice#, ',', ''), REPLACE(#PublicStock#, ',', '')
+									, REPLACE(#StockValue#, ',', ''), REPLACE(#OwnStock#, ',', '')
+									, REPLACE(#FaceValue#, ',', ''), NOW(), #RegPerSabun#, 'N'
+								)
+				ON DUPLICATE KEY
+						UPDATE UnitPrice = VALUES(UnitPrice)
+							 , PublicStock = VALUES(PublicStock)
+							 , StockValue = VALUES(StockValue)
+							 , OwnStock = VALUES(OwnStock)
+							 , FaceValue = VALUES(FaceValue)
+							 , EditDate = NOW()
+							 , EditPerSabun = VALUES(RegPerSabun)
+		/* adminDAO.PriceAddEndOneByOne */
+	</insert>
+	
+	
+	<!-- 펀드 수익율 등록 완료 -->
+	<insert id="adminDAO.FundIrrAddEnd" parameterClass="java.util.List">
+		INSERT INTO CS_Return_Rate_Fund(calcuDate, fundName,
+			setDate, durationDays, basePrice, irrTotal, 
+			RegDate, DelFlag) VALUES
+        <dynamic>
+		<iterate conjunction=",">
+			(#[].CalcuDate#, #[].FundName#,
+			#[].SetDate#, #[].DurationDays#, #[].BasePrice#, #[].IrrTotal#,
+			NOW(), 'N')
+		</iterate>
+		</dynamic>
+		ON DUPLICATE KEY UPDATE 
+			calcuDate = VALUES(calcuDate), 
+			fundName = VALUES(fundName), 
+			setDate = VALUES(setDate), 
+			durationDays = VALUES(durationDays), 
+			basePrice = VALUES(basePrice), 
+			irrTotal = VALUES(irrTotal), 
+			RegDate = VALUES(RegDate), 
+			DelFlag = VALUES(DelFlag);		
+	</insert>
+	
+	
+	<!-- 시가 수정 완료 -->
+	<update id="adminDAO.PriceEditEnd">
+		UPDATE CS_Cate_Price SET 
+			UnitPrice = REPLACE(#UnitPrice#, ',', ''),
+			PublicStock = REPLACE(#PublicStock#, ',', ''),
+			StockValue = REPLACE(#StockValue#, ',', ''),
+			OwnStock = REPLACE(#OwnStock#, ',', ''),
+			FaceValue = REPLACE(#FaceValue#, ',', ''),
+			EditDate = NOW(), EditPerSabun = #RegPerSabun# 
+		WHERE CateCd = #CateCd# AND PriceSeq = #PriceSeq# AND DelFlag = 'N'
+	</update>
+	
+	<!-- 시가 최초 입력일&최근 입력일 받아오기 -->
+	<select id="adminDAO.GetCatePriceDate" parameterClass="cusVO2" resultClass="String">
+		<isNotEmpty property="CateCd">
+			SELECT MIN(PriceDate) PriceDate FROM CS_Cate_Price WHERE CateCd = #CateCd#
+		</isNotEmpty>
+		<isEmpty property="CateCd">
+			SELECT MAX(PriceDate) PriceDate FROM CS_Cate_Price
+		</isEmpty>
+	</select>
+	
+	<!-- 시가 통계 받아오기 -->
+	<select id="adminDAO.GetCatePriceStats" parameterClass="cusVO2" resultClass="egovMap">
+		SELECT Cal_Date CalDate, Cal_Year CalYear, Cal_Month CalMonth, Cal_Day CalDay,
+		    ComCd, ComNm, CateCd, CateNm, CateType, CateNum, SubCateCd, SubCateNm, PriceDate, UnitPrice
+		FROM Calendar a
+		        LEFT OUTER JOIN
+		    (SELECT ComCd, ComNm, a.CateCd, CateNm, CateType, CateNum, SubCateCd, SubCateNm, PriceDate, UnitPrice
+		    FROM CS_Cate a, CS_Cate_Price b
+		    WHERE a.CateCd = #CateCd# AND a.CateCd = b.CateCd) b
+		ON a.Cal_Date = b.PriceDate
+		WHERE Cal_Date BETWEEN DATE_ADD(#SearchSDate#, INTERVAL -15 DAY) AND #SearchEDate#
+		ORDER BY CalDate
+	</select>
+	
+	<!-- 회사 정보 등록 완료 -->
+	<insert id="adminDAO.CompanyInfoAddEnd" parameterClass="java.util.List">
+		INSERT INTO CompanyInfo (ComCd, ComNm, AccountMonth,
+			MarketType, Addr, Tel, IRTel, CEO, BusiType, MaxHolder, MaxHaveStockRate, FoundDate, PublicDate, EmpCnt,
+			RegDate, RegPerSabun, DelFlag, EditDate) VALUES
+        <dynamic>
+		<iterate conjunction=",">
+			(#[].ComCd#, #[].ComNm#, #[].AccountMonth#,
+			#[].MarketType#, #[].Addr#, #[].Tel#, #[].IRTel#, #[].CEO#, #[].BusiType#, #[].MaxHolder#, #[].MaxHaveStockRate#, #[].FoundDate#, #[].PublicDate#, REPLACE(#[].EmpCnt#, ',', ''),
+			NOW(), #[].RegPerSabun#, 'N', NULL)
+		</iterate>
+		</dynamic>
+		ON DUPLICATE KEY UPDATE ComNm = VALUES(ComNm), AccountMonth = VALUES(AccountMonth), 
+		MarketType = VALUES(MarketType), Addr = VALUES(Addr), Tel = VALUES(Tel),
+		IRTel = VALUES(IRTel), CEO = VALUES(CEO), BusiType = VALUES(BusiType), MaxHolder = VALUES(MaxHolder), MaxHaveStockRate = VALUES(MaxHaveStockRate), FoundDate = VALUES(FoundDate),
+		PublicDate = VALUES(PublicDate), EmpCnt = VALUES(EmpCnt),
+		EditDate = NOW()
+	</insert>
+																<!-- 	시가	 	-->
+																
+																<!-- 	IB	 	-->
+	
+	<!-- 투자회사 리스트 받아오기 -->
+	<select id="adminDAO.GetInvestComList" parameterClass="HashMap" resultClass="egovMap">
+		SELECT InSuCd, InSuCom, SecCateCd, CusManagerNm, CASE WHEN SubCateNm = '채권' THEN 'BW' WHEN SubCateNm IS NULL THEN '워런트' ELSE SubCateNm END SubCateNm,
+			InSuSumMoney, InSuNabDay, ClaimFlag, InSuClaimExtraDay, InSuNowPrice, UnitPrice,WarCateCd,
+		    ReturnPer, DelFlag, FileFlag, GROUP_CONCAT(DISTINCT RegPerNm) RegPerNm, CusManagerNm, RegDate,
+		    (SELECT S_Nb FROM IB_Company WHERE Cpn_Id = SecCateCd) Snb
+		FROM
+		    (SELECT InSuCd, InSuCom, SecCateCd, BondCateCd, CusManagerNm, (SELECT SubCateNm FROM CS_Cate WHERE CateCd = BondCateCd) SubCateNm, FORMAT(InSuSumMoney, 0) InSuSumMoney, InSuNabDay,
+				ClaimFlag, InSuClaimExtraDay, FORMAT(InSuNowPrice, 0) InSuNowPrice, FORMAT(UnitPrice, 0) UnitPrice,WarCateCd,
+				CASE UnitPrice WHEN 0 THEN NULL ELSE ROUND(((UnitPrice / InSuNowPrice) - 1) * 100, 1) END ReturnPer, DelFlag
+			FROM
+				(SELECT InSuCd, InSuCom, SecCateCd, BondCateCd, InSuSumMoney, CusManagerNm, InSuNabDay, 
+					CASE WHEN InSuClaimStart <![CDATA[<=]]> NOW() AND InSuClaimEnd <![CDATA[>=]]> NOW() THEN 'O' ELSE 'X' END ClaimFlag,
+					DATEDIFF(InSuClaimEnd, NOW()) InSuClaimExtraDay, InSuNowPrice,WarCateCd,
+					(SELECT UnitPrice FROM CS_Cate_Price WHERE CateCd = SecCateCd AND PriceDate = UnitPriceDate) UnitPrice, DelFlag
+				FROM
+					(SELECT InSuCd, InSuCom, SecCateCd, BondCateCd, InSuSumMoney, InSuNabDay, CusManagerNm,
+						InSuClaimStart, InSuClaimEnd, InSuNowPrice, WarCateCd,
+						(SELECT MAX(PriceDate) PriceDate FROM CS_Cate_Price WHERE DelFlag = 'N' AND PriceDate <![CDATA[<=]]> NOW() AND CateCd = SecCateCd) UnitPriceDate, DelFlag
+				FROM CS_Invest_Summary_v InSum) a WHERE 1=1
+				<isNotEmpty prepend="AND" property="searchType">
+					<isEqual property="searchType" compareValue="1">
+						 DelFlag = 'N' OR DelFlag='Y' 
+					</isEqual>
+					<isEqual property="searchType" compareValue="2">
+						 DelFlag='N'
+					</isEqual>			
+					<isEqual property="searchType" compareValue="3">
+						 DelFlag='N'
+					</isEqual>			
+					<isEqual property="searchType" compareValue="4">
+						 DelFlag='Y'
+					</isEqual>			
+				</isNotEmpty>
+				
+				) b WHERE 1=1
+				<isNotEmpty prepend="AND" property="searchType">
+				<isEqual property="searchType" compareValue="1">
+						(claimFlag='X' OR claimFlag='O') 
+					</isEqual>
+					<isEqual property="searchType" compareValue="2">
+						(claimFlag='X' OR claimFlag='O') 
+					</isEqual>
+					<isEqual property="searchType" compareValue="3">
+						claimFlag='O' 
+					</isEqual>			
+				</isNotEmpty>
+				) data1
+			LEFT OUTER JOIN
+		    (SELECT ConSeq, d.ComCd, FileFlag, d.RegPerNm, d.RegDate
+			FROM
+				(SELECT a.S_Nb ConSeq, CASE WHEN a.Cpn_Id = '' THEN c.Cpn_Id ELSE a.Cpn_Id END ComCd,
+					(SELECT ComNm FROM CS_Cate WHERE ComCd = CASE WHEN a.Cpn_Id = '' THEN c.Cpn_Id ELSE a.Cpn_Id END AND SubCateCd = '2') ComNm,
+					a.Memo, REPLACE(Path, '\\', '\\\\') FilePath, b.Make_Name FileUpNm, b.Real_Name FileNm,
+					CASE WHEN Path IS NULL THEN 'N' ELSE 'Y' END FileFlag,
+					CASE Offer_Cd WHEN '00003' THEN '탐방' ELSE '분석' END OfferType,
+					RG_NM RegPerNm, (select CusManagerNm from cs_invest_summary_v where secCateCd=a.Cpn_Id limit 0, 1 ) CusManagerNm, DATE_FORMAT(Tm_Dt, '%Y-%m-%d') RegDate
+				FROM IB_Offer a
+				LEFT JOIN IB_File_Info b ON b.Offer_S_Nb = a.S_Nb
+				LEFT JOIN IB_Customer c ON c.S_Nb = a.Cst_Id
+				WHERE a.Offer_Cd IN ('00003' , '00004')
+					AND (a.Cpn_Id IN (SELECT SecCateCd FROM CS_Invest_Summary WHERE DelFlag = 'N')
+					OR c.Cpn_Id IN (SELECT SecCateCd FROM CS_Invest_Summary WHERE DelFlag = 'N'))) d,
+				(SELECT ComCd, MAX(RegDate) RegDate
+				FROM
+					(SELECT a.S_Nb, CASE WHEN a.Cpn_Id = '' THEN b.Cpn_Id ELSE a.Cpn_Id END ComCd, DATE_FORMAT(Tm_Dt, '%Y-%m-%d') RegDate
+				FROM IB_Offer a
+				LEFT JOIN IB_Customer b ON b.S_Nb = a.Cst_Id
+				WHERE a.Offer_Cd IN ('00003' , '00004')) c
+				GROUP BY ComCd) e
+			WHERE d.ComCd = e.ComCd AND d.RegDate = e.RegDate) data2
+		ON data1.SecCateCd = data2.ComCd
+		GROUP BY data1.SecCateCd, data1.BondCateCd, data1.WarCateCd
+		<isEmpty property="OrderKey">ORDER BY DelFlag ASC, InSuClaimExtraDay+0 ASC, InSuNabDay, InSuCom</isEmpty>
+		<isNotEmpty property="OrderKey">
+			<isEqual property="OrderFlag" compareValue="S">
+				<isNotEmpty property="searchType">
+					<isEqual property="searchType" compareValue="1">
+						ORDER BY $OrderKey$ $OrderType$, DelFlag ASC 
+					</isEqual>
+					<isNotEqual property="searchType" compareValue="1">
+						ORDER BY $OrderKey$ $OrderType$, DelFlag ASC
+					</isNotEqual>
+				</isNotEmpty>
+			</isEqual> 			
+			<isNotEqual property="OrderFlag" compareValue="S">ORDER BY $OrderKey$+0 $OrderType$, DelFlag ASC</isNotEqual>
+		</isNotEmpty>
+		
+	</select>
+	
+	<!-- 최근 분석&탐받 리스트 -->
+	<select id="adminDAO.GetVisitAnalList" resultClass="egovMap">
+		SELECT a.S_Nb ConSeq, CASE WHEN a.Cpn_Id = '' THEN c.Cpn_Id ELSE a.Cpn_Id END ComCd,
+		    (SELECT ComNm FROM CS_Cate WHERE ComCd = CASE WHEN a.Cpn_Id = '' THEN c.Cpn_Id ELSE a.Cpn_Id END AND SubCateCd = '2') ComNm,
+		    a.Memo, REPLACE(Path, '\\', '\\\\') FilePath, b.Make_Name FileUpNm, b.Real_Name FileNm,
+			CASE WHEN Path IS NULL THEN 'N' ELSE 'Y' END FileFlag,
+			CASE Offer_Cd WHEN '00003' THEN '탐방' ELSE '분석' END OfferType,
+		    Rg_Nm RegPerNm, DATE_FORMAT(Tm_Dt, '%Y-%m-%d') RegDate
+		FROM IB_Offer a
+			LEFT JOIN
+		    IB_File_Info b ON b.Offer_S_Nb = a.S_Nb
+		    LEFT JOIN
+		    IB_Customer c ON c.S_Nb = a.Cst_Id
+		<isEqual property="searchCondition" compareValue="All">WHERE a.Offer_Cd IN ('00003' , '00004')</isEqual>
+		<isNotEqual property="searchCondition" compareValue="All">WHERE a.Offer_Cd = #searchCondition#</isNotEqual>
+		<isNotEmpty prepend="AND" property="ComCd">(a.Cpn_Id = #ComCd# OR c.Cpn_Id = #ComCd#)</isNotEmpty>
+	        AND (a.Cpn_Id IN (SELECT SecCateCd FROM CS_Invest_Summary WHERE DelFlag = 'N') OR c.Cpn_Id IN (SELECT  SecCateCd FROM CS_Invest_Summary WHERE DelFlag = 'N'))
+		<isNotEmpty prepend="AND" property="searchKeyword">
+			((SELECT ComNm FROM CS_Cate WHERE ComCd = CASE WHEN a.Cpn_Id = '' THEN c.Cpn_Id ELSE a.Cpn_Id END AND SubCateCd = '2') LIKE '%$searchKeyword$%' OR Memo LIKE '%$searchKeyword$%' OR Rg_Nm LIKE '%$searchKeyword$%')
+		</isNotEmpty>
+		<isEmpty property="OrderKey">ORDER BY RegDate DESC, ComNm</isEmpty>
+		<isNotEmpty property="OrderKey">
+			<isEqual property="OrderFlag" compareValue="S">ORDER BY $OrderKey$ $OrderType$</isEqual>
+			<isNotEqual property="OrderFlag" compareValue="S">ORDER BY $OrderKey$+0 $OrderType$</isNotEqual>
+		</isNotEmpty>
+	</select>
+	
+	<!-- 최근 분석&탐방 정보 -->
+	<select id="adminDAO.GetVisitAnalInfo" resultMap="VisitAnalInfo">
+		SELECT a.S_Nb, CASE WHEN a.Cpn_Id = '' THEN c.Cpn_Id ELSE a.Cpn_Id END ComCd,
+		    (SELECT ComNm FROM CS_Cate WHERE ComCd = CASE WHEN a.Cpn_Id = '' THEN c.Cpn_Id ELSE a.Cpn_Id END AND SubCateCd = '2') ComNm,
+		    a.Memo, REPLACE(Path, '\\', '\\\\') FilePath, b.Make_Name FileUpNm, b.Real_Name FileNm,
+			CASE WHEN Path IS NULL THEN 'N' ELSE 'Y' END FileFlag,
+			CASE Offer_Cd WHEN '00003' THEN '탐방' ELSE '분석' END OfferType,
+		    Rg_Nm RegPerNm, DATE_FORMAT(Tm_Dt, '%Y-%m-%d') RegDate
+		FROM IB_Offer a
+			LEFT JOIN
+		    IB_File_Info b ON b.Offer_S_Nb = a.S_Nb
+		    LEFT JOIN
+		    IB_Customer c ON c.S_Nb = a.Cst_Id
+		WHERE a.Offer_Cd IN ('00003' , '00004') AND (a.Cpn_Id IN (SELECT SecCateCd FROM CS_Invest_Summary) OR c.Cpn_Id IN (SELECT  SecCateCd FROM CS_Invest_Summary))
+		AND a.S_Nb = #S_Nb#
+	</select>
+	
+	<!-- 분석리스트 -->
+	<select id="adminDAO.GetAnalList" parameterClass="cusVO2" resultClass="egovMap">
+		SELECT ComCd, ComNm, BusiType, CEO, Addr, MaxHolder, IFNULL(Tel, '-') Tel, IFNULL(IRTel, '-') IRTel,
+		    MaxHaveStockRate, AccountMonth, DATE_FORMAT(FoundDate, '%Y-%m-%d') FoundDate, DATE_FORMAT(PublicDate, '%Y-%m-%d') PublicDate,
+		    PriceDate, FORMAT(UnitPrice, 0) UnitPrice, FORMAT(StockValue, 0) StockValue, FORMAT(OwnStock, 0) OwnStock,
+		    FORMAT(FaceValue, 0) FaceValue, FORMAT((UnitPrice * OwnStock) / 100000000, 0) AS Money
+		FROM CompanyInfo a LEFT OUTER JOIN CS_Cate_Price b ON a.ComCd = b.CateCd
+		WHERE a.DelFlag = 'N' AND b.DelFlag = 'N'
+		<isEmpty property="PriceDate">
+			AND b.PriceDate = (SELECT MAX(PriceDate) FROM CS_Cate_Price WHERE CateCd = (SELECT MIN(CateCd) FROM CS_Cate WHERE CateType = '1' AND SubCateCd = '2'))
+		</isEmpty>
+		<isNotEmpty property="PriceDate">
+			AND b.PriceDate = #PriceDate#
+		</isNotEmpty>
+		<isNotEmpty property="ComCd">
+			AND a.ComCd = #ComCd#
+		</isNotEmpty>
+		<isEmpty property="OrderKey">ORDER BY ComNm</isEmpty>
+		<isNotEmpty property="OrderKey">
+			<isEqual property="OrderFlag" compareValue="S">ORDER BY $OrderKey$ $OrderType$</isEqual>
+			<isNotEqual property="OrderFlag" compareValue="S">ORDER BY $OrderKey$+0 $OrderType$</isNotEqual>
+		</isNotEmpty>
+	</select>
+																<!-- 	IB	 	-->
+																
+	<!-- 	홈페이지	 	-->
+	<!-- 투자성과 리스트 받아오기 -->
+	<select id="adminDAO.GetInvestResultList" parameterClass="cusVO2" resultClass="egovMap">
+		SELECT InSuCd, InvestNm, InvestType, InvestMoney, DATE_FORMAT(InSuChungDay, '%Y-%m') InvestDate, DATE_FORMAT(ReturnDate, '%Y-%m') ReturnDate, ReturnRate, ReturnPeriod,
+<!-- 		    YearRate, FORMAT(NowPrice, 0) NowPrice, FORMAT(UnitPrice, 0) UnitPrice, CASE UnitPrice WHEN 0 THEN NULL ELSE ROUND(((UnitPrice / NowPrice) - 1) * 100, 1) END ReturnPer, DelFlag, -->
+		    
+		    YearRate, FORMAT(NowPrice, 0) NowPrice, 
+		    CASE WHEN SellUnitPrice IS NULL THEN FORMAT(UnitPrice, 0) ELSE CONCAT('(', FORMAT(SellUnitPrice, 0), ')') END UnitPrice,
+		    CASE WHEN SellUnitPrice IS NULL THEN 
+				CASE UnitPrice WHEN 0 THEN NULL ELSE ROUND(((UnitPrice / NowPrice) - 1) * 100, 1) END
+				ELSE ROUND(((SellUnitPrice / NowPrice) - 1) * 100, 1) 
+			END ReturnPer, DelFlag, SellUnitPrice,
+		    SellUnitPriceDate, SellUnitPricePerSabun
+		FROM
+		    (SELECT InSuCd, InvestNm, InvestType, InvestMoney, InSuChungDay, ReturnDate, ReturnRate, ReturnPeriod,
+				YearRate, NowPrice, (SELECT UnitPrice FROM CS_Cate_Price WHERE CateCd = SecCateCd AND PriceDate = UnitPriceDate) UnitPrice, DelFlag,
+				SellUnitPrice, SellUnitPriceDate, SellUnitPricePerSabun
+		    FROM
+		        (SELECT InSuCd, SecCateCd, (SELECT REPLACE(CateNm, ' (주식)', '') FROM CS_Cate WHERE CateCd = SecCateCd) InvestNm,
+		            SUBSTRING(InSuNm, CHAR_LENGTH(InSuNm) - 4, 6) InvestType, InSuSumMoney InvestMoney, InSuChungDay, ReturnDate, FORMAT(ReturnRate, 0) ReturnRate,
+		            IFNULL(TIMESTAMPDIFF(MONTH, InSuChungDay, ReturnDate), 0) ReturnPeriod,
+		            ROUND((POW(POW((100 + InSuRepayIza) / 100, DATEDIFF(InSuRepayDay, InSuChungDay) / 365) / ((100 - InSuBuyBack * InSuBuyBackPre / 100) / 100), 1 / (DATEDIFF(InSuRepayDay, InSuChungDay) / 365)) - 1) * 100, 1) YearRate,
+		            InSuNowPrice NowPrice,
+		            (SELECT MAX(PriceDate) PriceDate FROM CS_Cate_Price WHERE DelFlag = 'N' AND PriceDate <![CDATA[<=]]> NOW() AND CateCd = SecCateCd) UnitPriceDate, DelFlag,
+		            SellUnitPrice, SellUnitPriceDate, SellUnitPricePerSabun
+		    FROM CS_Invest_Summary
+		    WHERE HomeViewFlag = 'Y') a) b
+		    WHERE DelFlag = #DelFlag#
+		    <isEqual property="DelFlag" compareValue="Y">
+			ORDER BY CASE WHEN ReturnDate != '' THEN ReturnDate WHEN ReturnDate = '' THEN InSuChungDay ELSE IFNULL(ReturnDate, InSuChungDay) END DESC, InvestDate DESC
+			</isEqual>
+			<isEqual property="DelFlag" compareValue="N">
+			ORDER BY CASE WHEN ReturnDate != '' THEN ReturnDate WHEN ReturnDate = '' THEN InSuChungDay ELSE IFNULL(ReturnDate, InSuChungDay) END ASC, InvestDate ASC
+			</isEqual>
+	</select>
+	
+	<!-- 투자성과 리스트 받아오기 -->
+	<select id="adminDAO.GetInvestResultListForSA" parameterClass="HashMap" resultClass="egovMap">
+		SELECT InSuCd, InvestNm, InvestType, InvestMoney, DATE_FORMAT(InSuChungDay, '%Y-%m') InvestDate, DATE_FORMAT(ReturnDate, '%Y-%m') ReturnDate, ReturnRate, ReturnPeriod,
+<!-- 		    YearRate, FORMAT(NowPrice, 0) NowPrice, FORMAT(UnitPrice, 0) UnitPrice, CASE UnitPrice WHEN 0 THEN NULL ELSE ROUND(((UnitPrice / NowPrice) - 1) * 100, 1) END ReturnPer, DelFlag, -->
+		    
+		    YearRate, FORMAT(NowPrice, 0) NowPrice, 
+		    CASE WHEN SellUnitPrice IS NULL THEN FORMAT(UnitPrice, 0) ELSE CONCAT('(', FORMAT(SellUnitPrice, 0), ')') END UnitPrice,
+		    CASE WHEN SellUnitPrice IS NULL THEN 
+				CASE UnitPrice WHEN 0 THEN NULL ELSE ROUND(((UnitPrice / NowPrice) - 1) * 100, 1) END
+				ELSE ROUND(((SellUnitPrice / NowPrice) - 1) * 100, 1) 
+			END ReturnPer, DelFlag, SellUnitPrice,
+		    SellUnitPriceDate, SellUnitPricePerSabun
+		FROM
+		    (SELECT InSuCd, InvestNm, InvestType, InvestMoney, InSuChungDay, ReturnDate, ReturnRate, ReturnPeriod,
+				YearRate, NowPrice, (SELECT UnitPrice FROM CS_Cate_Price WHERE CateCd = SecCateCd AND PriceDate = UnitPriceDate) UnitPrice, DelFlag,
+				SellUnitPrice, SellUnitPriceDate, SellUnitPricePerSabun
+		    FROM
+		        (SELECT InSuCd, SecCateCd, (SELECT REPLACE(CateNm, ' (주식)', '') FROM CS_Cate WHERE CateCd = SecCateCd) InvestNm,
+		            SUBSTRING(InSuNm, CHAR_LENGTH(InSuNm) - 4, 6) InvestType, InSuSumMoney InvestMoney, InSuChungDay, ReturnDate, FORMAT(ReturnRate, 0) ReturnRate,
+		            IFNULL(TIMESTAMPDIFF(MONTH, InSuChungDay, ReturnDate), 0) ReturnPeriod,
+		            ROUND((POW(POW((100 + InSuRepayIza) / 100, DATEDIFF(InSuRepayDay, InSuChungDay) / 365) / ((100 - InSuBuyBack * InSuBuyBackPre / 100) / 100), 1 / (DATEDIFF(InSuRepayDay, InSuChungDay) / 365)) - 1) * 100, 1) YearRate,
+		            InSuNowPrice NowPrice,
+		            (SELECT MAX(PriceDate) PriceDate FROM CS_Cate_Price WHERE DelFlag = 'N' AND PriceDate <![CDATA[<=]]> NOW() AND CateCd = SecCateCd) UnitPriceDate, DelFlag,
+		            SellUnitPrice, SellUnitPriceDate, SellUnitPricePerSabun
+		    FROM CS_Invest_Summary
+		    WHERE HomeViewFlag = 'Y') a) b
+		    WHERE DelFlag = #DelFlag#
+		    <isNotEmpty prepend="AND" property="search">
+		    	InvestNm like  CONCAT('%',#search#,'%')	
+		    </isNotEmpty>
+		    <isNotEmpty prepend="AND" property="investType">
+		    	InvestType like  CONCAT('%',#investType#,'%')		    	
+		    </isNotEmpty>		    
+		    <isEqual property="DelFlag" compareValue="Y">
+			ORDER BY CASE WHEN ReturnDate != '' THEN ReturnDate WHEN ReturnDate = '' THEN InSuChungDay ELSE IFNULL(ReturnDate, InSuChungDay) END DESC, InvestDate DESC
+			</isEqual>
+			<isEqual property="DelFlag" compareValue="N">
+			ORDER BY CASE WHEN ReturnDate != '' THEN ReturnDate WHEN ReturnDate = '' THEN InSuChungDay ELSE IFNULL(ReturnDate, InSuChungDay) END ASC, InvestDate ASC
+			</isEqual>
+	</select>
+	<!-- 	홈페이지	 	-->
+																
+	<!-- 현금 등록 관련 로그 -->
+	<insert id="adminDAO.CashLogAddEnd_List" parameterClass="java.util.List">
+		INSERT INTO CS_Invest_Status_Log (CusCd, CateCd, InvestType, InvestCd, InvestCnt, InvestUnitPrice, InvestTradeMoney,
+	     	 InvestCharge, InvestTax, OddlotMoney, InvestCalcuMoney, InvestDate,
+	     	 ETCInfo, ProcType, InSuCd, ISICCd, AddMethod, RegDate, RegPerSabun) VALUES
+        <dynamic>
+		<iterate conjunction=",">
+			(LPAD(#[].CusCd#, 12, 0), #[].CateCd#, #[].InvestType#, #[].InvestCd#, REPLACE(#[].InvestCnt#, ',', ''), REPLACE(#[].InvestUnitPrice#, ',', ''), REPLACE(#[].InvestTradeMoney#, ',', ''),
+			REPLACE(#[].InvestCharge#, ',', ''), REPLACE(#[].InvestTax#, ',', ''), REPLACE(#[].OddlotMoney#, ',', ''), REPLACE(#[].InvestCalcuMoney#, ',', ''), #[].InvestDate#,
+			#[].ETCInfo#, #[].ProcType#, #[].InSuCd#, #[].ISICCd#, #[].AddMethod#, NOW(), #[].RegPerSabun#)
+		</iterate>
+		</dynamic>
+	</insert>
+	
+	<insert id="adminDAO.CashLogAddEnd_Alone">
+		INSERT INTO CS_Invest_Status_Log (CusCd, CateCd, InvestType, InvestCd, InvestCnt, InvestUnitPrice, InvestTradeMoney,
+	     	 InvestCharge, InvestTax, OddlotMoney, InvestCalcuMoney, InvestDate,
+	     	 ETCInfo, ProcType, InSuCd, ISICCd, AddMethod, RegDate, RegPerSabun)
+		VALUES (#CusCd#, #CateCd#, #InvestType#, #InvestCd#, REPLACE(#InvestCnt#, ',', ''), REPLACE(#InvestUnitPrice#, ',', ''), REPLACE(#InvestTradeMoney#, ',', ''),
+	     	 REPLACE(#InvestCharge#, ',', ''), REPLACE(#InvestTax#, ',', ''), REPLACE(#OddlotMoney#, ',', ''), REPLACE(#InvestCalcuMoney#, ',', ''), #InvestDate#,
+	     	 #ETCInfo#, #ProcType#, #InSuCd#, CASE WHEN #ISICCd# != '' THEN LPAD(#ISICCd#, 12, 0) ELSE '' END, #AddMethod#, NOW(), #RegPerSabun#)
+	</insert>
+	
+	
+	<select id="adminDAO.GetFundIrr" resultClass="egovMap">
+		SELECT 
+			<!-- returnRateId, calcuDate, fundCode, fundName, fundManager, irrWeek,  irrMonth1, irrMonth3, irrMonth12, irrDay, regDate, delFlag  -->
+			returnRateId, DATE_FORMAT(calcuDate, '%Y-%m-%d') calcuDate, fundName, DATE_FORMAT(setDate, '%Y-%m-%d') setDate, durationDays, basePrice, irrTotal, regDate, delFlag
+		FROM SYNERGYMAIN.CS_RETURN_RATE_FUND 
+		WHERE calcuDate=(SELECT MAX(calcuDate) FROM SYNERGYMAIN.CS_RETURN_RATE_FUND ) ORDER BY setDate ASC		
+	</select>
+	
+	
+	<select id="adminDAO.GetFundIrrNew" resultClass="egovMap">
+		SELECT 			
+			returnRateId, 
+			DATE_FORMAT(calcuDate, '%Y-%m-%d') calcuDate, 
+			fundName, 
+			DATE_FORMAT(setDate, '%Y-%m-%d') setDate, 
+			durationDays, 
+			basePrice, 
+			irrTotal, 
+			incomeShare, 
+			IF( incomeShare = '-', irrTotal, ROUND(irrTotal + incomeShare,2) ) totalIncomeShare,			
+			regDate, 
+			delFlag
+		FROM SYNERGYMAIN.CS_RETURN_RATE_FUND_V
+	</select>
+	
+	
+		<!-- 시가 최초 입력일&최근 입력일 받아오기 -->
+	<select id="adminDAO.GetFundIrrLastDate" parameterClass="cusVO2" resultClass="String">		
+		SELECT DATE_FORMAT(MAX(calcuDate), '%Y-%m-%d') CalcuDate FROM SYNERGYMAIN.CS_RETURN_RATE_FUND WHERE delFlag='N'		
+	</select>
+		
+	<!-- 권한체크  -->
+	<select id="adminDAO.CheckPerAuthority" parameterClass="HashMap" resultClass="int">		
+		SELECT COUNT(*) 
+		FROM cs_authority_staff 
+		WHERE 
+			PER_SABUN=#regPerSabun# AND 
+			AUTH_ID IN 
+				(SELECT AUTH_ID FROM cs_authority_config WHERE AUTH_NAME=#authName# AND DEL_FLAG='N')
+			AND DEL_FLAG='N'			
+	</select>
+	
+</sqlMap>

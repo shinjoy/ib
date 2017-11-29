@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="network">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="wVO" type="ib.work.service.WorkVO"/>
+	
+<!--
+	<select id="networkDAO.selectNetworkList" parameterClass="wVO" resultClass="wVO">
+		<![CDATA[
+		SELECT 
+				'네트워크'			as tmpNum1
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN 'nw1' WHEN C3.CPN_NM != '' THEN 'nwC' ELSE 'nw1' END		as tmpNum2
+				,A.USR_NM 		as name
+				,'' 				as sNb
+				,B.S_NB_2nd 		as snb1st
+				,CASE WHEN C3.CPN_NM != '' THEN B3.S_NB_2nd ELSE B2.S_NB_2nd END		as snb2nd
+				,C.CST_NM 		as cstNm1st
+				,case when b2.note like CONCAT('%',#search#,'%') then C2.CST_NM when c3.cpn_nm != '' and c3.cpn_nm like CONCAT('%',#search#,'%') then c3.cpn_nm	else '' end	as cstNm2nd
+				,B.NOTE 		as text
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN B2.NOTE when C3.CPN_NM != '' and c3.cpn_nm like CONCAT('%',#search#,'%') then B3.NOTE ELSE '' END 		as text0
+				,D.NOTE 		as comment
+		   FROM IB_STAFF A
+		LEFT JOIN IB_NET_POINT B ON B.S_NB_1st = A.CUS_ID
+		LEFT JOIN IB_CUSTOMER C ON C.S_NB = B.S_NB_2nd
+		LEFT JOIN IB_NET_POINT B2 ON B2.S_NB_1st = B.S_NB_2nd
+		LEFT JOIN IB_CUSTOMER C2 ON C2.S_NB = B2.S_NB_2nd
+		LEFT JOIN IB_CST_DEAL_INFO B3 ON B3.S_NB_1st = B.S_NB_2nd
+		LEFT JOIN IB_COMPANY C3 ON C3.S_NB = B3.S_NB_2nd
+		LEFT JOIN IB_NOTE D ON D.CST_S_NB = B.S_NB_2nd
+		  WHERE replace(B.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		    AND A.USR_NM != C2.CST_NM
+		     OR replace(C.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(C3.CPN_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		
+		UNION
+		
+		SELECT 
+				'네트워크'			as tmpNum1
+				,'nw2'			as tmpNum2
+				,A.USR_NM 		as name
+				,'' 				as sNb
+				,B.S_NB_2nd 		as snb1st
+				,B2.S_NB_1st 		as snb2nd
+				,C.CST_NM 		as cstNm1st
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN C2.CST_NM ELSE '' END		as cstNm2nd
+				,B.NOTE 		as text
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN B2.NOTE ELSE '' END 		as text0
+				,D.NOTE 		as comment
+		   FROM IB_STAFF A
+		LEFT JOIN IB_NET_POINT B ON B.S_NB_1st = A.CUS_ID
+		LEFT JOIN IB_CUSTOMER C ON C.S_NB = B.S_NB_2nd
+		LEFT JOIN IB_NET_POINT B2 ON B2.S_NB_2nd = B.S_NB_2nd
+		LEFT JOIN IB_CUSTOMER C2 ON C2.S_NB = B2.S_NB_1st
+		LEFT JOIN IB_NOTE D ON D.CST_S_NB = B.S_NB_2nd
+		  WHERE replace(B.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		    AND A.USR_NM != C2.CST_NM
+		     OR replace(C.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		
+		UNION
+		
+		SELECT
+				'네트워크'			as tmpNum1
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN 'nw3' WHEN C3.CPN_NM != '' THEN 'nwC' ELSE 'nw3' END		as tmpNum2
+				,A.USR_NM 		as name
+				,'' 				as sNb
+				,B.S_NB_1st 		as snb1st
+				,CASE WHEN C3.CPN_NM != '' THEN B3.S_NB_2nd ELSE B2.S_NB_2nd END		as snb2nd
+				,C.CST_NM 		as cstNm1st
+				,case when b2.note like CONCAT('%',#search#,'%') then C2.CST_NM when c3.cpn_nm != '' and c3.cpn_nm like CONCAT('%',#search#,'%') then c3.cpn_nm	else '' end	as cstNm2nd
+				,B.NOTE 		as text
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN B2.NOTE when C3.CPN_NM != '' and c3.cpn_nm like CONCAT('%',#search#,'%') then B3.NOTE ELSE '' END 		as text0
+				,D.NOTE 		as comment
+		   FROM IB_STAFF A
+		LEFT JOIN IB_NET_POINT B ON B.S_NB_2nd = A.CUS_ID
+		LEFT JOIN IB_CUSTOMER C ON C.S_NB = B.S_NB_1st
+		LEFT JOIN IB_NET_POINT B2 ON B2.S_NB_1st = B.S_NB_1st
+		LEFT JOIN IB_CUSTOMER C2 ON C2.S_NB = B2.S_NB_2nd
+		LEFT JOIN IB_CST_DEAL_INFO B3 ON B3.S_NB_1st = B.S_NB_1st
+		LEFT JOIN IB_COMPANY C3 ON C3.S_NB = B3.S_NB_2nd
+		LEFT JOIN IB_NOTE D ON D.CST_S_NB = B.S_NB_1st
+		  WHERE replace(B.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		    AND A.USR_NM != C2.CST_NM
+		     OR replace(C.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(C3.CPN_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		
+		UNION
+		
+		SELECT
+				'네트워크'			as tmpNum1
+				,'nw4'			as tmpNum2
+				,A.USR_NM 		as name
+				,'' 				as sNb
+				,B.S_NB_1st 		as snb1st
+				,B2.S_NB_1st 		as snb2nd
+				,C.CST_NM 		as cstNm1st
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN C2.CST_NM ELSE '' END		as cstNm2nd
+				,B.NOTE 		as text
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN B2.NOTE ELSE '' END 		as text0
+				,D.NOTE 		as comment
+		   FROM IB_STAFF A
+		LEFT JOIN IB_NET_POINT B ON B.S_NB_2nd = A.CUS_ID
+		LEFT JOIN IB_CUSTOMER C ON C.S_NB = B.S_NB_1st
+		LEFT JOIN IB_NET_POINT B2 ON B2.S_NB_2nd = B.S_NB_1st
+		LEFT JOIN IB_CUSTOMER C2 ON C2.S_NB = B2.S_NB_1st
+		LEFT JOIN IB_CST_DEAL_INFO B3 ON B3.S_NB_1st = B.S_NB_1st
+		LEFT JOIN IB_COMPANY C3 ON C3.S_NB = B3.S_NB_2nd
+		LEFT JOIN IB_NOTE D ON D.CST_S_NB = B.S_NB_1st
+		  WHERE replace(B.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		    AND A.USR_NM != C2.CST_NM
+		     OR replace(C.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		
+		UNION
+		
+		SELECT 
+				'넷웍등록'			as tmpNum1
+				,'nwR'			as tmpNum2
+				,A.USR_NM 		as name
+				,'' 				as sNb
+				,B.S_NB_1st 		as snb1st
+				,B.S_NB_2nd 		as snb2nd
+				,C.CST_NM 		as cstNm1st
+				,C2.CST_NM 		as cstNm2nd
+				,'' 		as text
+				,B.NOTE 		as text0
+				,D.NOTE 		as comment
+		   FROM IB_STAFF A
+		LEFT JOIN IB_NET_POINT B ON B.RG_ID = A.USR_ID
+		LEFT JOIN IB_CUSTOMER C ON C.S_NB = B.S_NB_1st
+		LEFT JOIN IB_CUSTOMER C2 ON C2.S_NB = B.S_NB_2nd
+		LEFT JOIN IB_NOTE D ON D.CST_S_NB = B.S_NB_2nd
+		  WHERE replace(B.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		    AND A.USR_NM != C2.CST_NM
+		     OR replace(C.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(C2.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		
+		UNION
+		
+		SELECT
+				'정보정리'			as tmpNum1
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN 'inf' WHEN C3.CPN_NM != '' THEN 'nwC' ELSE 'inf' END		as tmpNum2
+				,A.USR_NM 		as name
+				,B.S_NB		 		as sNb
+				,B.CST_ID	 		as snb1st
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN B2.S_NB_2nd WHEN C3.CPN_NM != '' and c3.cpn_nm like CONCAT('%',#search#,'%') THEN B3.S_NB_2nd ELSE B2.S_NB_2nd END		as snb2nd
+				,C.CST_NM 		as cstNm1st
+				,case when b2.note like CONCAT('%',#search#,'%') then C2.CST_NM when c3.cpn_nm != '' and c3.cpn_nm like CONCAT('%',#search#,'%') then c3.cpn_nm	else '' end	as cstNm2nd
+				,B.MEMO 		as text
+				,CASE WHEN B2.NOTE LIKE CONCAT('%',#search#,'%') THEN B2.NOTE when C3.CPN_NM != '' and c3.cpn_nm like CONCAT('%',#search#,'%') then B3.NOTE ELSE '' END 		as text0
+				,''		as comment
+		   FROM IB_STAFF A
+		LEFT JOIN IB_OFFER B ON B.RG_ID = A.USR_ID
+		LEFT JOIN IB_CUSTOMER C ON C.S_NB = B.CST_ID
+		LEFT JOIN IB_COMPANY D ON D.CPN_ID = B.CPN_ID
+		LEFT JOIN IB_OFFER_INFO E ON E.OFFER_SNB = B.S_NB
+		LEFT JOIN IB_NET_POINT B2 ON B2.S_NB_1st = B.CST_ID
+		LEFT JOIN IB_CUSTOMER C2 ON C2.S_NB = B2.S_NB_2nd
+		LEFT JOIN IB_CST_DEAL_INFO B3 ON B3.S_NB_1st = B.CST_ID
+		LEFT JOIN IB_COMPANY C3 ON C3.S_NB = B3.S_NB_2nd
+		  WHERE (C.CST_NM IS NOT NULL AND C.CST_NM != '')
+		    AND replace(B.MEMO,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(C.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(D.CPN_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(C3.CPN_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(E.COMMENT,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		
+		UNION
+		
+		SELECT 
+				'법인넷웍'			as tmpNum1
+				,'nwC'			as tmpNum2
+				,A.USR_NM 		as name
+				,'' 				as sNb
+				,B.S_NB_1st 		as snb1st
+				,B.S_NB_2nd 		as snb2nd
+				,CASE WHEN C.CST_NM IS NULL THEN D.CPN_NM ELSE C.CST_NM END as cstNm1st
+				,'' 			as cstNm2nd
+				,B.NOTE 		as text
+				,'' 			as text0
+				,'' 			as comment
+		   FROM IB_STAFF A
+		LEFT JOIN IB_CST_DEAL_INFO B ON B.S_NB_1st = A.CUS_ID
+		LEFT JOIN IB_CUSTOMER C ON C.S_NB = B.S_NB_2nd
+		LEFT JOIN IB_COMPANY D ON D.S_NB = B.S_NB_2nd
+		  WHERE replace(B.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(C.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		     OR replace(D.CPN_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		ORDER BY name ASC, cstNm1st ASC, cstNm2nd ASC
+		]]>
+
+	</select>
+	<select id="networkDAO.selectIntegrateSearchList" parameterClass="wVO" resultClass="wVO">
+		<![CDATA[
+		
+		SELECT *
+		FROM(
+		SELECT
+				'정보정리'			as tmpNum1
+				,'of'			as tmpNum2
+				,OF.S_NB		 		as sNb
+				,OF.TM_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(OF.MEMO,1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b>',SUBSTRING_INDEX(OF.MEMO,#search#,-1)),1,30) 		as text0
+				,OF.OFFER_CD		as offerCd
+		   FROM IB_OFFER OF
+		LEFT JOIN IB_CUSTOMER CST ON CST.S_NB = OF.CST_ID
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = OF.RG_ID
+		  WHERE replace(OF.MEMO,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'정보정리'			as tmpNum1
+				,'of'			as tmpNum2
+				,OF.S_NB		 		as sNb
+				,OF.TM_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CONCAT(CST.CST_NM, ' : ', OF.MEMO),1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',CST.CST_NM,'</b> : ',SUBSTRING_INDEX(OF.MEMO,#search#,-1)),1,30) 		as text0
+				,OF.OFFER_CD		as offerCd
+		   FROM IB_OFFER OF
+		LEFT JOIN IB_CUSTOMER CST ON CST.S_NB = OF.CST_ID
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = OF.RG_ID
+		  WHERE (CST.CST_NM IS NOT NULL AND CST.CST_NM != '')
+		    AND replace(CST.CST_NM,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'정보정리'			as tmpNum1
+				,'of'			as tmpNum2
+				,OF.S_NB		 		as sNb
+				,OF.TM_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CONCAT(CPN.CPN_NM, ' : ', OF.MEMO),1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',CPN.CPN_NM,'</b> : ',SUBSTRING_INDEX(OF.MEMO,#search#,-1)),1,30) 		as text0
+				,OF.OFFER_CD		as offerCd
+		   FROM IB_OFFER OF
+		LEFT JOIN IB_COMPANY CPN ON CPN.CPN_ID = OF.CPN_ID
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = OF.RG_ID
+		  WHERE CPN.CPN_NM LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'핵심체크'			as tmpNum1
+				,'of'			as tmpNum2
+				,OF.S_NB		 		as sNb
+				,OF.TM_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(OFIF.COMMENT,1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b>',SUBSTRING_INDEX(OFIF.COMMENT,#search#,-1)),1,30) 		as text0
+				,OF.OFFER_CD		as offerCd
+		   FROM IB_OFFER OF
+		LEFT JOIN IB_OFFER_INFO OFIF ON OFIF.OFFER_SNB = OF.S_NB
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = OF.RG_ID
+		  WHERE replace(OFIF.COMMENT,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'네트워크'			as tmpNum1
+				,'nw'			as tmpNum2
+				,NW.S_NB_1st		 		as sNb
+				,NW.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(NW.NOTE,1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b>',SUBSTRING_INDEX(NW.NOTE,#search#,-1)),1,30) 		as text0
+				,''		as offerCd
+		   FROM IB_NET_POINT NW
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = NW.RG_ID
+		  WHERE replace(NW.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'네트워크인물1'			as tmpNum1
+				,'nw'			as tmpNum2
+				,NW.S_NB_1st		 		as sNb
+				,NW.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CST.CST_NM,1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b> : ',SUBSTRING_INDEX(CST.CST_NM,#search#,-1)),1,30) 		as text0
+				,''		as offerCd
+		   FROM IB_NET_POINT NW
+		LEFT JOIN IB_CUSTOMER CST ON CST.S_NB = NW.S_NB_1st
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = NW.RG_ID
+		  WHERE CST.CST_NM LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'네트워크인물2'			as tmpNum1
+				,'nw'			as tmpNum2
+				,NW.S_NB_2nd		 		as sNb
+				,NW.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CST.CST_NM,1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b> : ',SUBSTRING_INDEX(CST.CST_NM,#search#,-1)),1,30) 		as text0
+				,''		as offerCd
+		   FROM IB_NET_POINT NW
+		LEFT JOIN IB_CUSTOMER CST ON CST.S_NB = NW.S_NB_2nd
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = NW.RG_ID
+		  WHERE CST.CST_NM LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'법인네트워크'			as tmpNum1
+				,'nwB'			as tmpNum2
+				,DIF.S_NB_2nd		 		as sNb
+				,DIF.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CONCAT(CPN.CPN_NM, ' : ', DIF.NOTE),1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b> : ',SUBSTRING_INDEX(SUBSTRING(CONCAT(CPN.CPN_NM, ' : ', DIF.NOTE),1,50),#search#,-1)),1,30) 		as text0
+				,''		as offerCd
+		   FROM IB_CST_DEAL_INFO DIF
+		LEFT JOIN IB_COMPANY CPN ON CPN.S_NB = DIF.S_NB_2nd
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = DIF.RG_ID
+		  WHERE replace(DIF.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'법인네트워크인물'			as tmpNum1
+				,'nwB'			as tmpNum2
+				,DIF.S_NB_2nd		 		as sNb
+				,DIF.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CONCAT(CST.CST_NM, ' : ', DIF.NOTE),1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b> : ',SUBSTRING_INDEX(SUBSTRING(CONCAT(CST.CST_NM, ' : ', DIF.NOTE),1,50),#search#,-1)),1,30) 		as text0
+				,''		as offerCd
+		   FROM IB_CST_DEAL_INFO DIF
+		LEFT JOIN IB_CUSTOMER CST ON CST.S_NB = DIF.S_NB_1st
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = DIF.RG_ID
+		  WHERE CST.CST_NM LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'법인네트워크회사'			as tmpNum1
+				,'nwB'			as tmpNum2
+				,DIF.S_NB_2nd		 		as sNb
+				,DIF.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CONCAT(CPN.CPN_NM, ' : ', DIF.NOTE),1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b> : ',SUBSTRING_INDEX(SUBSTRING(CONCAT(CPN.CPN_NM, ' : ', DIF.NOTE),1,50),#search#,-1)),1,30) 		as text0
+				,''		as offerCd
+		   FROM IB_CST_DEAL_INFO DIF
+		LEFT JOIN IB_COMPANY CPN ON CPN.S_NB = DIF.S_NB_2nd
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = DIF.RG_ID
+		  WHERE CPN.CPN_NM LIKE CONCAT('%',replace(#search#,' ',''),'%')
+    UNION
+
+		SELECT
+				'의견'			as tmpNum1
+				,'ro'			as tmpNum2
+				,RO.OFFER_SNB	 		as sNb
+				,RO.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CONCAT(CPN.CPN_NM,' : ',RO.COMMENT),1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b>',SUBSTRING_INDEX(SUBSTRING(CONCAT(CPN.CPN_NM,' : ',RO.COMMENT),1,50),#search#,-1)),1,30) 		as text0
+				,OF.OFFER_CD		as offerCd
+		   FROM IB_RECOMMEND_OPINION RO
+		LEFT JOIN IB_OFFER OF ON OF.S_NB = RO.OFFER_SNB
+		LEFT JOIN IB_COMPANY CPN ON CPN.CPN_ID = OF.CPN_ID
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = OF.RG_ID
+		  WHERE RO.CATEGORY = '00001'
+		    AND replace(RO.COMMENT,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'회사주요품목'		as tmpNum1
+				,'nwB'				as tmpNum2
+				,MP.S_NB		 		as sNb
+				,MP.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(CONCAT(MP.CPN_NM, ' : ', MP.MAJOR_PRODUCT),1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b>',SUBSTRING_INDEX(SUBSTRING( MP.MAJOR_PRODUCT,1,50),#search#,-1)),1,30) 		as text0
+				,''		as offerCd
+		   FROM IB_COMPANY MP
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = MP.RG_ID
+		  WHERE MP.MAJOR_PRODUCT LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+    UNION
+
+		SELECT
+				'이력정보'			as tmpNum1
+				,'nw'				as tmpNum2
+				,NO.CST_S_NB	 		as sNb
+				,NO.RG_DT	 		as tmDt
+				,STF.USR_NM	 		as rgNm
+				,SUBSTRING(NO.NOTE,1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b>',SUBSTRING_INDEX(NO.NOTE,#search#,-1)),1,30) 		as text0
+				,''		as offerCd
+		   FROM IB_NOTE NO
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = NO.RG_ID
+		  WHERE replace(NO.NOTE,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+
+	UNION
+
+		SELECT
+				case when REPORT_YN='Y' then '리포트' else (case when fi.file_category='00002' then '의견 첨부파일' else '정보정리 첨부파일' end) end			as tmpNum1
+				,'file'					as tmpNum2
+				,case when fi.file_category='00002' then (select offer_snb from ib_recommend_opinion where s_nb = fi.offer_s_nb) when fi.file_category='00000' then fi.offer_s_nb else '0' end		 		as sNb
+				,FI.RG_DT	 			as tmDt
+				,STF.USR_NM	 			as rgNm
+				,SUBSTRING(FI.REAL_NAME,1,70) 		as text
+				,SUBSTRING(CONCAT('<b>',#search#,'</b>',SUBSTRING_INDEX(FI.REAL_NAME,#search#,-1)),1,30) 		as text0
+				,case when fi.file_category='00002' then '00006' else '' end		as offerCd
+		   FROM IB_FILE_INFO FI
+		LEFT JOIN IB_STAFF STF ON STF.USR_ID = FI.RG_ID
+		  WHERE replace(FI.REAL_NAME,' ','') LIKE CONCAT('%',replace(#search#,' ',''),'%')
+		    and REPORT_YN <> '0'
+		  ]]><isEqual prepend="AND" property="text" compareValue="fil">
+				REPORT_YN = 'Y'
+		  </isEqual><![CDATA[
+
+		  ) U
+		WHERE U.tmpNum2 like concat('%',replace(#text#,' ',''),'%')
+	GROUP BY U.sNb,U.text
+	ORDER BY U.tmDt DESC
+		]]>
+	</select>
+	<select id="networkDAO.selectStaffNetListCnt" parameterClass="wVO" resultClass="wVO">
+		<![CDATA[
+		SELECT
+				A.NET_CD		as netCd
+				,COUNT(1)		as netCnt
+		 FROM  IB_STAFF_NETWORK A
+	LEFT JOIN  IB_STAFF B ON B.S_NB = A.STAFF_SNB
+		]]><isNotEmpty property="usrId"><![CDATA[
+		WHERE  B.USR_ID = #usrId#
+		]]></isNotEmpty><![CDATA[
+	 GROUP BY  A.NET_CD
+		]]>
+	</select>
+	<select id="networkDAO.selectStaffNetList" parameterClass="wVO" resultClass="wVO">
+		<![CDATA[
+			SELECT
+					A.S_NB				as sNb
+					,A.NET_CD			as netCd
+					,A.COMMENT			as comment
+					,A.RG_ID			as rgId
+					,A.RG_DT			as rgDt
+					,C.S_NB			as cstSnb
+					,C1.CPN_NM		as cpnNm
+					,C.CST_NM		as cstNm
+					,C.POSITION		as position
+					,B.USR_NM		as usrNm
+			 FROM  IB_STAFF_NETWORK A
+		LEFT JOIN  IB_STAFF 	 B ON B.S_NB = A.STAFF_SNB
+		LEFT JOIN  IB_CUSTOMER 	 C ON C.S_NB = A.CST_SNB
+		LEFT JOIN  IB_COMPANY 	C1 ON C.CPN_ID = C1.CPN_ID
+			WHERE  A.NET_CD = #netCd#
+		]]><isNotEmpty property="usrId"><![CDATA[
+			  AND  B.USR_ID = #usrId#
+		]]></isNotEmpty>
+	</select>
+	
+	<insert id="networkDAO.insertStaffNetwork">
+		<![CDATA[
+			INSERT INTO IB_STAFF_NETWORK 
+			select  0
+				  , s_nb
+				  , #cstSnb#
+				  , #netCd#
+				  , #comment#
+				  , now()
+				  , usr_id
+				  , now()
+				  , usr_id
+			 from  ib_staff
+		WHERE
+				usr_id = #rgId#
+		]]>
+			<isNotEmpty property="snb1st"><![CDATA[
+				cus_id = #snb1st#
+			]]></isNotEmpty>
+	</insert>
+	<update id="networkDAO.updateStaffNetwork">
+		<![CDATA[
+			UPDATE IB_STAFF_NETWORK 
+			SET 
+				  UP_DT  	    =  now()
+				, UP_ID  	  	=  #rgId#
+				, CST_SNB  	  	=  #cstSnb#
+				, NET_CD  	  	=  #netCd#
+				, COMMENT 	  	=  #comment#
+			WHERE S_NB   	  	=  #sNb#
+		]]>
+	</update>
+	<delete id="networkDAO.deleteStaffNetwork">
+		<![CDATA[
+			DELETE FROM IB_STAFF_NETWORK
+			 WHERE S_NB = #sNb#
+		]]>
+	</delete>
+	 -->
+	
+	
+	<select id="networkDAO.selectNetworkCnt" parameterClass="wVO" resultClass="java.lang.Integer">
+		select
+				count(1)
+		  from (
+				select 
+						 a.s_nb_2nd as cus
+						,st.usr_id
+				  from ib_net_point a
+			 left join ib_staff st on st.cus_id = a.S_NB_1st
+			 
+				union all
+				
+				select
+						 a.s_nb_1st as cus
+						,st.usr_id
+				  from ib_net_point a
+			 left join ib_staff st on st.cus_id = a.S_NB_2nd
+				) ua
+		 where ua.usr_id = #rgId#
+		   and ua.cus = #cstId#
+	</select>
+	
+	
+	<!-- 
+	<select id="networkDAO.selectStaffInNetworkCnt" parameterClass="wVO" resultClass="java.lang.Integer">
+		select
+				count(1)
+		  from (
+				select 
+						a.s_nb as snb
+					   ,st.s_nb
+				  from ib_net_point a
+			 left join ib_staff st on st.cus_id = a.S_NB_1st
+				union all
+				select
+						a.s_nb as snb
+					   ,st.s_nb
+				  from ib_net_point a
+			 left join ib_staff st on st.cus_id = a.S_NB_2nd
+				) ua
+		 where ua.snb = #sNb#
+		   and ua.s_nb is not null
+	</select>
+	
+	<select id="networkDAO.selectDuplicateCheckStaffNetworkCnt" parameterClass="wVO" resultClass="java.lang.Integer">
+		select
+				count(1)
+		  from ib_staff_network sn
+	 left join ib_staff st on st.s_nb = sn.staff_snb
+		 where sn.cst_snb = #cstSnb#
+		   and st.cus_id = #snb1st#
+	</select>
+	
+	<select id="networkDAO.selectStaffInchargeList" parameterClass="wVO" resultClass="wVO">
+		<![CDATA[
+			select 
+					stf.usr_nm
+					, case when ichrg.category='1' then '회사' when ichrg.category='2' then '인물' end as tmpNum1
+					, ichrg.target_snb as sNb
+					, ichrg.category as categoryCd
+					, case when ichrg.category='1' then cpn.cpn_nm when ichrg.category='2' then cpn1.cpn_nm end as cpnNm
+					, case when ichrg.category='1' then '' when ichrg.category='2' then cst.cst_nm end as cstNm
+					, case when ichrg.category='1' then '' when ichrg.category='2' then cst.position end as position
+				 from ib_incharge ichrg
+			left join ib_staff stf on stf.usr_id = ichrg.rg_id
+			left join ib_company cpn on cpn.s_nb = ichrg.target_snb
+			left join ib_customer cst on cst.s_nb = ichrg.target_snb
+			left join ib_company cpn1 on cpn1.cpn_id = cst.cpn_id
+				WHERE 1=1
+		]]><isNotEmpty prepend="AND" property="usrId"><![CDATA[
+			  ichrg.rg_id = #usrId#
+		]]></isNotEmpty><![CDATA[
+			order by ichrg.category asc, cpnNm asc, cstNm asc
+		]]>
+	</select>
+	 -->
+</sqlMap>

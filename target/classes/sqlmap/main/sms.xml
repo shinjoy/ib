@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="sms">
+
+
+	<!-- sms log 조회 -->
+	<select id="sms.getSmsLogList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+				  smsSeq				AS smsSeq
+				, smsContent			AS smsContent
+				
+				, smsType				AS smsType
+				, smsToNum				AS smsToNum
+				, smsFromNum			AS smsFromNum
+				, smsContent			AS smsContent
+				
+				, smsSendFlag			AS smsSendFlag
+				
+				, DATE_FORMAT(smsReserTime,'%Y%m%d%k%i%s')			AS smsReserTime
+
+		FROM SMSLOG
+		WHERE 1=1
+		<isNotEmpty prepend="AND" property="smsSeq">
+				smsSeq = #smsSeq#
+		</isNotEmpty>
+
+
+		/*sms.getSmsLogList*/
+	</select>
+
+	<!-- sms log 기록 -->
+	<insert id="sms.insertSms" parameterClass="HashMap">
+	
+		INSERT INTO SMSLOG
+				  ( 
+					  	SMSType
+					  , SMSToNum
+					  , SMSFromNum
+					  , SMSContent
+					  , SMSReserTime
+					  , CATEGORY_TYPE
+		 ) VALUES ( 
+			 			#smsType#
+			 		<isEmpty property="phoneNumber">
+			 		  , (select PHN_1 from IB_STAFF WHERE SABUN = #recieveSabun#)
+			 		</isEmpty>
+			 		<isNotEmpty property="phoneNumber">
+			 		  , #phoneNumber#
+			 		</isNotEmpty>	
+					 
+					  , #smsEndTelNo#
+					  , #content#
+					  , DATE_FORMAT(NOW(),'%Y%m%d%H%m%s')
+					  , #categoryType#
+				  )
+		
+		<selectKey keyProperty="smsSeq" resultClass="string">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+				  
+		/*sms.insertSms*/
+	</insert>
+
+	<!-- 문자 전송결과 업데이트 완료 -->
+	<update id="sms.smsSendResult" parameterClass="HashMap">
+
+		UPDATE SMSLOG SET
+					 smsEndTime			=	#smsEndTime#
+					,smsSendTime		=	#smsSendTime#
+					,smsSendFlag		=	#smsSendFlag#
+
+		WHERE smsSeq	=	#smsSeq#
+
+	</update>
+
+	<!-- 관계사 SMS 전송 대표번호 조회 -->
+    <select id="sms.getSmsEndTelNo" parameterClass="HashMap" resultClass="String">
+        SELECT IFNULL(MAX(SMS_END_TEL_NO),'') AS smsEndTelNo
+		FROM bs_user_master A, bs_org B
+		WHERE A.org_id = B.org_id
+		AND A.user_id = #sendUserId#
+
+        /*sms.getSmsEndTelNo*/
+    </select>
+
+
+</sqlMap>

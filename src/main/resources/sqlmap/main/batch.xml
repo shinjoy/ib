@@ -1,0 +1,558 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="batch">
+
+
+	<!-- ================================== 등용문 관련 :S ================================== -->
+	
+	<!-- 회사정보 일배치 -->
+	<select id="batch.selectCompanyListForReport" parameterClass="HashMap" resultClass="HashMap">
+		select a.s_nb				as snb
+			  ,a.cpn_id				as cpnId
+		      ,a.a_cpn_id			as acpnId
+		      ,a.cpn_nm				as cpnNm
+		      ,a.ceo_id				as ceoId
+		      ,a.category_business	as categoryBusiness
+		      ,a.major_product		as majorProduct
+		      <!-- ,a.opinion			as opinion -->
+		      ,''					as opinion
+		      ,b.ceo				as ceo
+		      ,b.addr				as addr
+		      ,b.maxHolder			as maxHolder
+		      ,b.tel				as tel
+		      ,b.irTel				as irTel
+		      ,b.maxHaveStockRate	as maxStockRate
+		      ,b.accountMonth		as accountMonth
+		      ,b.foundDate			as foundDate
+		      ,b.publicDate			as publicDate
+			  ,(case when left(a.rg_dt, 10) = #searchDate# or left(b.regdate, 10) = #searchDate# then 'C' else 'U' end) as cudFlag
+		      
+		from ib_company			a
+		left join companyinfo	b on b.comcd = a.a_cpn_id
+		where 1=1
+		  and (
+			  a.up_dt like concat(left(#searchDate#, 10), '%')
+		      or
+		      b.regdate like concat(left(#searchDate#, 10), '%')
+			  or
+			  b.editdate like concat(left(#searchDate#, 10), '%')
+		      )
+		
+		/* batch.selectCompanyListForReport */
+	</select>
+	
+	
+	<!-- 직원정보 일배치 -->
+	<select id="batch.selectCustomerListForReport" parameterClass="HashMap" resultClass="HashMap">
+		select s_nb 					as snb
+		  	  ,cst_nm					as cstNm
+	      	  ,cpn_id					as cpnId
+	      	  ,email					as email
+	      	  ,phn_1					as phn1
+	      	  ,phn_2					as phn2
+	      	  ,phn_3					as phn3
+	      	  ,team						as team
+	      	  ,position					as position
+	      	  ,category_person_cd		as categoryPersonCd
+	      	  ,lv_cd					as lvlCd
+	      	  ,delete_flag				as deleteYn
+	      	  ,(case when left(rg_dt, 10) = #searchDate# then 'C' else 'U' end) as cudFlag
+      
+		  from ib_customer
+		 where 1=1
+		   and up_dt like concat(left(#searchDate#, 10), '%')
+		   
+		 /* batch.selectCustomerListForReport */
+	</select>
+	
+	
+	<!-- 주가정보 일배치 -->
+	<select id="batch.selectPriceListForReport" parameterClass="HashMap" resultClass="HashMap">
+		select cpnId, baseDt, unitPrice, stockValue, ownStock, faceValue, money, cudFlag   
+		  from (
+		select ifnull(m.cpn_id, (select cpn_id from ib_company where cpn_id = k.catecd)) as cpnId
+			  ,pricedate	as baseDt
+		      ,unitprice	as unitPrice
+		      ,stockvalue	as stockValue
+		      ,ownstock		as ownStock
+		      ,facevalue	as faceValue
+		      ,0			as money
+		      ,'C'			as cudFlag
+		      
+		  from cs_cate_price	k
+		  left join ib_company	m on m.a_cpn_id = k.catecd
+		 where 1=1
+		   and k.pricedate = #searchDate#
+		  ) z
+		where z.cpnId is not null
+		
+		/* batch.selectPriceListForReport */
+	</select>
+	
+	
+	<!-- 탐방정보 일배치 -->
+	<select id="batch.selectVisitListForReport" parameterClass="HashMap" resultClass="HashMap">
+		select cpn_id																as cpnId
+		  	  ,left(tm_dt,10)														as visitDt
+	      	  ,(case when left(a.rg_dt, 10) = #searchDate# then 'C' else 'U' end) 	as cudFlag
+
+	  	  from ib_offer	a
+	 	 where a.offer_cd = '00003'
+		   and a.up_dt like concat(#searchDate#, '%')
+		   
+		union all
+
+		select a.company															as cpnId
+		  	  ,a.schesdate															as visitDt
+	      	  ,(case when left(a.regdate, 10) = #searchDate# then 'C' else 'U' end) as cudFlag
+
+	  	  from erp.erp_schedule	a
+	 	 where 1=1
+           and a.delflag = 'N'           
+           and a.company is not null
+           and a.company != ''
+		   and (a.regdate like concat(#searchDate#, '%')
+				or
+                a.editdate like concat(#searchDate#, '%'))
+		   
+		/* batch.selectVisitListForReport */
+	</select>
+	
+	
+	
+	<!-- 탐방정보 첨부파일 원본 일괄변환위한 파일 정보(파트너분석자료) -->
+	<select id="batch.selectFileListForOri" parameterClass="HashMap" resultClass="HashMap">
+		select real_name	as realNm
+			  ,make_name	as makeNm
+		      ,rg_id		as rgId
+		      
+		  from ib_file_info
+		 where 1=1
+		   and offer_s_nb in (select s_nb
+							    from ib_offer
+							   where offer_cd = '00003'
+							     and rg_id in ('fkwy','fbyh','fpjw','fjjh') order by s_nb desc)
+							     
+		   and file_category = '00000'
+		   
+		 order by concat('K',make_name) asc
+		 
+		/* batch.selectFileListForOri */
+	</select>
+	
+	<!-- 등용문 데이터 IF테이블 저장 -->
+	<insert id="batch.insertReportIf" parameterClass="HashMap">	
+		INSERT INTO BASE.BS_REPORT_IF (
+						
+						  REPORT_SEQ
+						, IB_USER_ID  
+						, USER_NM
+						, TITLE
+						, CONTENT
+						, PRIVATE_INFO
+						, CORP_NM
+						, CORP_INFO_SEQ
+						, EMP_NM
+						, EMP_MSTR_SEQ
+						, ANAL_DT
+						, ANAL_COMMENT_CD
+						, ANAL_VALID_TERM_CD
+						, APPRAISAL_DT
+						, VISIT_DT
+						, VISIT_AREA_CD
+						, IB_REPORT_SEQ
+						, INVEST_RECOMMEND_YN
+						, INVEST_DECISION_YN
+						, ATCH_FILE_GRP_SEQ
+						, CUD_FLAG
+						, CREATE_DATE
+		
+				)VALUES(
+						  #reportSeq#
+						, #ibUserId#  
+						, #ibUserNm#
+						, #title#
+						, #content#
+						, #privateInfo#
+						, #corpNm#
+						, #corpInfoSeq#
+						, #empNm#
+						, #empMstrSeq#
+						, #analDt#
+						, #analCommentCd#
+						, #analValidTermCd#
+						, #appraisalDt#
+						, (CASE WHEN #visitDt# = '' THEN NULL ELSE #visitDt# END )
+						, #visitAreaCd#
+						, (CASE WHEN #ibReportSeq# = '' THEN NULL ELSE #ibReportSeq# END ) 
+						, #investRecommendYn#
+						, #investDecisionYn#
+						, #atchFileGrpSeq#
+						, #cudFlag#
+						, now()
+				
+				)
+			<selectKey keyProperty="reportId" resultClass="Integer">
+				SELECT LAST_INSERT_ID()
+			</selectKey>			
+			
+		/* batch.insertReportIf */	
+	</insert>
+	
+	<!-- 등용문 파일 IF테이블 저장 -->
+	<insert id="batch.insertFileIf" parameterClass="HashMap">	
+		INSERT INTO BASE.BS_REPORT_FILE_IF (
+						
+						  ATCH_FILE_SEQ 
+						, ATCH_FILE_GRP_SEQ 
+						, FILE_TYPE_CD 
+						, MIME_TYPE 
+						, EXT 
+						, VOLUME 
+						, FILE_ORGN_NM 
+						, FILE_PHYS_NM 
+						, PATH 
+						, CUD_FLAG
+						, CREATE_DATE 
+		
+				)VALUES(
+						  #atchFileSeq# 
+						, #atchFileGrpSeq# 
+						, #fileTypeCd# 
+						, #mimeType# 
+						, #ext# 
+						, #volume# 
+						, #fileOrgnNm# 
+						, #filePhysNm# 
+						, #path#
+						, #cudFlag#
+						, now() 
+				
+				)
+			<selectKey keyProperty="reportFileId" resultClass="Integer">
+				SELECT LAST_INSERT_ID()
+			</selectKey>
+		/* batch.insertFileIf */	
+	</insert>
+	
+	<!-- ib_offer 저장 -->
+	<insert id="batch.insertIbOffer">		
+		INSERT INTO IB_OFFER( 
+						  	  	MIDDLE_OFFER_CD	
+						  	  , OFFER_CD
+						  	  
+						  	  , TM_DT
+						  	  , RG_NM
+						  	  , CPN_CST	
+						  	  , CST_ID
+						  	  , CPN_ID
+						  	  , CATEGORY_CD
+						  	  , PRICE
+							  , INVEST_PRICE
+							 	
+							  
+							  
+							  
+							  
+							  ,	MEMO
+							  , RG_DT
+							  , RG_ID
+							  , UP_DT
+							  , UP_ID
+							  , FINANCING
+							  , MANAGEMENT
+							  , MNA
+							  , ETC
+							  , SHARE
+							  , RESOURCE
+							  , HUMAN_NET
+							  , AUDIT
+							  , INVEST_INTE
+							  , SERVEY
+							  
+							  , COWORKER
+							 
+							  , SUPPORTER
+				  
+				  			  , SUPPORTER_TEXT
+				  
+				  
+				  
+							  , RECOMMEND_SNB
+							  
+							  , SELL_BUY	 
+							  , CPN_TYPE_CD		
+							 
+							  , INFO_LEVEL	
+				 
+				  
+				  
+			  
+				 ) VALUES ( 
+				 
+				 				#middleOfferCd#
+				 			  , #offerCd#	
+					 		  , CONCAT(#tmDt#,' ',DATE_FORMAT(now(), '%H:%i:%s'))
+					 		  , (SELECT USR_NM FROM IB_STAFF WHERE USR_ID = #ibUserId#)
+					 		  , #cpnCst#	
+					 		  , #cstId#
+					 		  , (SELECT CPN_ID FROM IB_COMPANY WHERE S_NB = #cpnId#)	
+					 		  , #categoryCd#
+					 		  , #price#
+					 		  , #investPrice#
+					 		  , #memo#
+							  , now()
+							  , #ibUserId#
+							  , now()
+							  , #ibUserId#
+							  , #financing#
+							  , #management#
+							  , #mna#
+							  , #etc#
+							  , #share#
+							  , #resource#
+							  , #humanNet#
+							  , #audit#
+							  , #investInte#
+							  , #servey#
+							  , #coworker#
+							  , #supporter#
+							  , #supporterText#
+							  , #recommendSnb#
+							  , #sellBuy#
+							  , #cpnTypeCd#
+							  , #infoLevel#
+							  
+						  
+						 ) 
+						 
+		<selectKey keyProperty="sNb" resultClass="Integer">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		
+		/* batch.insertIbOffer */
+	</insert>
+	
+	
+	<!-- offer 업데이트 -->
+	<update id="batch.updateIbOffer" >
+			UPDATE IB_OFFER SET
+   
+					   	MIDDLE_OFFER_CD	=	#middleOfferCd#
+				  	  , OFFER_CD		=	#offerCd#
+				  	  , TM_DT			=	CONCAT(#tmDt#,' ',DATE_FORMAT(now(), '%H:%i:%s'))
+				  	  , CPN_CST			=	#cpnCst#	
+				  	  , CST_ID			=	#cstId#
+				  	  , CPN_ID			=	(SELECT CPN_ID FROM IB_COMPANY WHERE S_NB = #cpnId#)
+				  	  , CATEGORY_CD		=	#categoryCd#
+				  	  , PRICE			=	#price#
+					  , INVEST_PRICE	=	#investPrice#
+					  ,	MEMO			=	#memo#
+					  , UP_DT			= 	now()
+					  , UP_ID			=	#ibUserId#					  
+		
+			 WHERE s_nb = #offerId#	
+				  
+		/* batch.updateIbOffer */	
+	</update>
+	
+	
+	
+	<!-- ib_offer_info 저장 -->
+	<insert id="batch.insertIbOfferInfo">
+		
+		INSERT INTO IB_OFFER_INFO( 
+						
+						OFFER_SNB
+			  		  , STAR
+					  , EXPIRATION_DT
+					  , CATEGORY
+					  , COMMENT
+					  , RG_DT
+					  , UP_DT
+					  , RG_ID
+					  , UP_ID
+	 		) VALUES ( 
+			 			#offerSnb#
+					  , #star#
+					  , (CASE WHEN #expirationDt# IS NULL OR #expirationDt# = '' THEN NULL ELSE #expirationDt# END)
+					  , #category#
+					  , #comment#
+					  , now()
+					  , now()
+					  , #ibUserId#
+					  , #ibUserId#
+			)
+		
+		<selectKey keyProperty="sNb" resultClass="Integer">
+			SELECT LAST_INSERT_ID()
+		</selectKey>	
+		
+		/* batch.insertIbOfferInfo */
+	</insert>
+	
+	
+	<!-- offer info update -->
+	<update id="batch.updateIbOfferInfo" >
+			UPDATE IB_OFFER_INFO SET
+					 
+			  		  	STAR			= 	#star#
+					  , EXPIRATION_DT	=	(CASE WHEN #expirationDt# IS NULL OR #expirationDt# = '' THEN NULL ELSE #expirationDt# END)
+					  , CATEGORY		=	#category#
+					  , COMMENT			=	#comment#
+					  , UP_DT			=	now()
+					  , UP_ID			=	#ibUserId#
+					  
+			WHERE OFFER_SNB = #offerSnb#		  
+	
+		/* batch.updateIbOfferInfo */
+	</update>
+	
+	
+	<!-- ib_file_info 저장 -->
+	<insert id="batch.insertIbFileInfo">		
+		INSERT INTO IB_FILE_INFO ( 
+							  	  	OFFER_S_NB	
+							  	  , SUB_CD
+							  	  , REPORT_YN
+							  	  , REAL_NAME
+							  	  , MAKE_NAME	
+							  	  , PATH
+							  	  , RG_DT
+							  	  , UP_DT
+							  	  , RG_ID
+								  , UP_ID
+								  , FILE_CATEGORY	
+					
+					 ) VALUES ( 
+					 
+					 				#offerSnb#
+					 			  , #subCd#	
+						 		  , #reportYn#
+						 		  , #realName#	
+						 		  , #makeName#
+						 		  , #path#	
+						 		  , now()
+								  , now()
+								  , #ibUserId#
+								  , #ibUserId#
+								  , #fileCategory#
+					)
+			 
+		<selectKey keyProperty="sNb" resultClass="Integer">
+			SELECT LAST_INSERT_ID()
+		</selectKey>			 
+	
+		/* batch.insertIbFileInfo */
+	</insert>
+	
+	
+	<!-- 마지막 저장 offerId 기록 -->
+	<update id="batch.updateReportIf">
+		UPDATE BASE.BS_REPORT_IF 
+		   SET
+				  OFFER_ID 		= #offerId#
+				, RECOMMEND_ID 	= #recommendId#
+						
+		 WHERE REPORT_ID = #ifReportId#
+		   AND REPORT_SEQ = #reportSeq#
+		   
+		/* batch.updateReportIf */
+	</update>
+	
+	
+	<!-- 최근 offerId 조회 -->
+	<select id="batch.getBeforeIfInfo" parameterClass="HashMap" resultClass="HashMap">
+		SELECT 
+				  REPORT_ID 			AS reportId
+				, REPORT_SEQ 			AS reportSeq
+				, OFFER_ID  			AS offerId
+				, RECOMMEND_ID  		AS recommendId
+				, IB_USER_ID  			AS ibUserId
+				, USER_NM  				AS userNm
+				, TITLE  				AS title
+				, CONTENT  				AS cotent
+				, PRIVATE_INFO  		AS privateInfo
+				, CORP_NM  				AS corpNm
+				, CORP_INFO_SEQ  		AS corpInfoSeq
+				, EMP_NM  				AS empNm
+				, EMP_MSTR_SEQ  		AS empMstrSeq
+				, ANAL_DT 				AS analDt
+				, ANAL_COMMENT_CD  		AS analCommentCd
+				, ANAL_VALID_TERM_CD 	AS analValidTermCd  
+				, APPRAISAL_DT  	 	AS appraisalDt	
+				, VISIT_DT 				AS visitDt
+				, VISIT_AREA_CD  		AS visitAreaCd
+				, IB_REPORT_SEQ  		AS ibReportSeq
+				, INVEST_RECOMMEND_YN  	AS investRecommendYn
+				, INVEST_DECISION_YN  	AS investDecisionYn
+				, ATCH_FILE_GRP_SEQ  	AS atchFileGrpSeq
+				, CUD_FLAG 				AS cudFlag
+				, CREATE_DATE 			AS createDate
+		
+		  FROM BASE.BS_REPORT_IF
+		
+		 WHERE REPORT_SEQ = #reportSeq#
+		   AND REPORT_ID != #ifReportId#
+		   AND OFFER_ID IS NOT NULL 
+		
+		 ORDER BY CREATE_DATE DESC
+		 LIMIT 1
+		
+		/* batch.getBeforeIfInfo */		
+	</select>
+	
+	
+	<!-- file info 삭제 -->
+	<delete id="batch.deleteIbFileInfo" parameterClass="java.lang.Integer">
+		DELETE FROM IB_FILE_INFO 
+		WHERE OFFER_S_NB = #offerSnb#
+	</delete>
+	
+	
+	<!-- offer 삭제 -->
+	<delete id="batch.deleteIbOffer" parameterClass="HashMap">
+		DELETE FROM IB_OFFER
+		WHERE S_NB = #offerId#
+	</delete>
+	
+	
+	<!-- offer_info 삭제 -->
+	<delete id="batch.deleteIbOfferInfo" parameterClass="HashMap">
+		DELETE FROM IB_OFFER_INFO 
+		WHERE OFFER_SNB = #offerId#
+	</delete>
+	
+	
+	<!-- 저장전 기록여부 판별 (ib_offer)-->
+	<select id="batch.chkIbOffer" parameterClass="HashMap" resultClass="String">
+		SELECT COUNT(1) FROM IB_OFFER WHERE S_NB = #offerId#
+	</select>
+	
+	
+	<!-- 저장전 기록여부 판별 (ib_offer_info)-->
+	<select id="batch.chkIbOfferInfo" parameterClass="HashMap" resultClass="String">
+		SELECT COUNT(1) FROM IB_OFFER_INFO WHERE OFFER_SNB = #offerSnb#
+	</select>
+		
+	
+	<!-- 파트너 회원정보 -->
+	<select id="batch.selectPartnerListForReport" parameterClass="HashMap" resultClass="HashMap">
+		SELECT S_NB								AS userId
+			  ,USR_ID							AS loginId
+			  ,USR_NM							AS userNm
+			  ,DATE_FORMAT(RG_DT, '%Y-%m-%d')	AS createDate
+			  
+		  FROM IB_STAFF
+		 WHERE SRT_CD = '00000'
+		   AND TEAM = 11
+		   
+		/* batch.selectPartnerListForReport */
+	</select>
+	
+	
+	<!-- ================================== 등용문 관련 :E ================================== -->
+	
+	
+</sqlMap>

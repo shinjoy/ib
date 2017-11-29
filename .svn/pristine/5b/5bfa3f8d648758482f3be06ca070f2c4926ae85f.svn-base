@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="alarm">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	
+
+	<!-- 알림리스트 -->
+	<select id="alarm.getAlarmList" parameterClass="HashMap" resultClass="HashMap">
+			SELECT
+				  alarm_id              as  alarmId
+				, alarm_target         	as  alarmTarget
+				, alarm_type            as  alarmType
+				, alarm_text            as  alarmText
+				, alarm_period			as  alarmPeriod
+				, DATE_FORMAT(alarm_start, '%Y-%m-%d')	as  alarmStart
+				, DATE_FORMAT(alarm_end,   '%Y-%m-%d') 	as  alarmEnd
+				, DATE_FORMAT(create_date, '%Y-%m-%d')  as  createDate
+				, created_by            as  createdBy
+				, update_date           as  updateDate
+				, updated_by            as  updatedBy
+			FROM base.bs_alarm_list
+		
+			WHERE DATE_FORMAT(alarm_start, '%Y-%m-%d')>'1988-01-08'
+			<isNotEmpty prepend="AND" property="alarmTarget">
+				alarm_target = #alarmTarget#
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="alarmType">
+				alarm_type =#alarmType#
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="alarmText">
+				alarm_text like concat('%', #alarmText#, '%')
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="alarmStart">
+				#alarmStart# BETWEEN DATE(alarm_start) AND DATE(alarm_end)
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="alarmId">
+				alarm_Id = #alarmId#
+			</isNotEmpty>
+			<isNotEmpty prepend="" property="sortCol">
+				ORDER BY $sortCol$ $sortVal$, alarm_id DESC
+			</isNotEmpty>
+			<isEmpty prepend="" property="sortCol">
+				ORDER BY create_date DESC, alarm_id DESC
+			</isEmpty>
+			<isNotEmpty prepend="" property="limit">
+				LIMIT #offset#, #limit#
+			</isNotEmpty>
+			/*alarm.getAlarmList*/
+	</select>
+	
+	<!-- 알림 리스트 갯수 -->
+	<select id="alarm.getAlarmListCount" parameterClass="HashMap" resultClass="Integer">
+			SELECT COUNT(*) 
+			FROM base.bs_alarm_list
+			WHERE DATE_FORMAT(alarm_start, '%Y-%m-%d')>'1988-01-08' 
+			
+			/*alarm.getAlarmListCount*/
+	</select>
+	<!-- 알림 저장(등록) -->
+	<insert id="alarm.insertAlarm" parameterClass="HashMap">
+		
+		INSERT INTO base.bs_alarm_list
+				  (
+				    alarm_target
+				  , alarm_type
+				  , alarm_text
+				  , alarm_period
+				  , alarm_start
+				  , alarm_end
+				  , create_date
+				  , created_by
+				  , update_date
+				  , updated_by
+		 ) VALUES (
+		 		    #alarmTarget#
+				  , #alarmType#
+				  , #alarmText#
+				  , #alarmPeriod#
+				  , #alarmStart#
+				  , #alarmEnd#
+				  , now()
+				  , #staffSnb#
+				  , now()
+				  , #staffSnb#
+				  )
+		<selectKey keyProperty="alarm_id" resultClass="String">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		/*alarm.insertAlarm*/
+	</insert>
+	
+	<!-- 알림 저장(수정) -->
+	<update id="alarm.updateAlarm">		  
+		  UPDATE base.bs_alarm_list
+		  SET
+			    alarm_target  =  #alarmTarget#
+			  , alarm_type	  =  #alarmType#
+			  , alarm_text	  =  #alarmText#
+			  , alarm_period  =  #alarmPeriod#
+			  , alarm_start	  =  #alarmStart#
+			  , alarm_end	  =  #alarmEnd#	
+			  , UPDATE_DATE	  =  now()
+			  , UPDATED_BY	  =  #staffSnb#
+		  WHERE alarm_id  =  #alarmId#
+		/*alarm.updatetAlarm*/
+	 </update>
+	 
+	 <!-- 알림 삭제 -->
+	<update id="alarm.deleteAlarm">		  
+		  UPDATE base.bs_alarm_list
+		  SET
+			    alarm_start	  =  #alarmStart#
+			  , alarm_end	  =  #alarmEnd#	
+		  WHERE alarm_id  =  #alarmId#
+		/* alarm.deleteAlarm */
+	 </update>
+	 
+	 	
+	<!-- 알림 팝업창 오픈 여부 -->
+	<select id="alarm.selectPopUser" parameterClass="HashMap" resultClass="HashMap">
+		SELECT A.SABUN	 			AS perSabun
+			 , A.USR_NM				AS perNm
+			 , A.OFFICE		 																AS compositionCd	<!-- 회사코드 -->
+			 , (SELECT HQ_NAME FROM BASE.BS_COMPANY_HQ WHERE HQ_ID = A.OFFICE)				AS composition		<!-- 회사명 -->
+			 , A.POSITION 																	AS positionCd		<!-- 직급코드 -->
+			 , (SELECT positionNm FROM ERP.ERP_PER_POSITION WHERE positionCd = A.POSITION) 	AS position			<!-- 직급명 -->
+			 
+			 , C.B_CARD_YN 			AS bCardYn
+			 , D.ALARM_YN 			AS alarmYn
+			 , GROUP_CONCAT(DISTINCT D.ALARM_ID ORDER BY D.ALARM_ID) AS alarmIds
+			 
+		  FROM IB_STAFF 			A		  
+		  LEFT JOIN BASE.BS_USER_PROFILE C ON C.USER_ID = A.S_NB
+		  LEFT JOIN BASE.BS_ALARM_TARGET D ON D.USER_ID = A.S_NB
+          LEFT JOIN BASE.BS_ALARM_LIST E ON E.ALARM_ID = D.ALARM_ID
+		  
+		 WHERE 1=1
+		   AND A.s_nb = #staffSnb#
+		   AND D.ALARM_YN = 'Y'
+		   AND DATE(NOW()) BETWEEN E.ALARM_START AND E.ALARM_END
+		 GROUP BY A.S_NB
+		 
+		/* alarm.selectPopUser */
+	</select>
+	
+	<!--  알림 팝업창 아이디 정보 반환-->
+	<select id="alarm.selectPopupIds" resultClass="HashMap">
+		SELECT ALARM_ID AS alarmId 
+		  FROM base.BS_ALARM_LIST 
+		 WHERE date(now()) BETWEEN ALARM_START AND ALARM_END
+		 
+		 /* alarm.selectPopupIds */
+	</select>
+	
+	<!--  알림 팝업창 정보 반환 -->
+	<select id="alarm.selectPopupInfo" parameterClass="HashMap" resultClass="HashMap">
+		/* alarm.selectPopupInfo */
+		 SELECT ALARM_ID AS alarmId, ALARM_TEXT AS alarmText 
+		 FROM  
+		 base.BS_ALARM_LIST 
+		 WHERE 
+		 ALARM_ID = #alarmId#
+	</select>
+	
+	<!-- 알람 타겟 지우기 -->
+	<delete id="alarm.deleteAlarmTarget">
+		<![CDATA[
+			DELETE FROM base.bs_alarm_target
+			 WHERE alarm_id      =  #alarmId#
+		]]>
+	</delete>
+	
+	<!-- 알림 타겟 저장 -->
+	<insert id="alarm.insertAlarmTarget" parameterClass="HashMap">
+		
+		INSERT INTO base.bs_alarm_target
+				  (
+				    alarm_id
+				  , user_id
+				  , alarm_yn
+				  , create_date
+				  , created_by
+				  , update_date
+				  , updated_by
+		 ) VALUES (
+		 		    #alarmId#
+				  , #userId#
+				  , #alarmYn#
+				  , now()
+				  , #staffSnb#
+				  , now()
+				  , #staffSnb#
+				  )
+		
+		/*alarm.insertAlarmTarget*/
+	</insert>
+	
+	<!-- 알림 타겟 리스트 -->
+	<select id="alarm.getAlarmTargetList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+			  target.alarm_id            as  alarmId
+			, target.user_id         	 as  userId
+			, target.alarm_yn            as  alarmYn
+			, target.created_by          as  createdBy
+			, target.update_date         as  updateDate
+			, target.updated_by          as  updatedBy
+			, staff.division             as  division
+			, staff.team            	 as  team
+		FROM BASE.BS_ALARM_TARGET				AS target 
+		LEFT OUTER JOIN SYNERGYMAIN.IB_STAFF 	AS staff ON STAFF.S_NB = TARGET.USER_ID
+		
+		WHERE 1=1
+		<isNotEmpty prepend="AND" property="alarmId">
+			ALARM_ID = #alarmId#
+		</isNotEmpty>
+		/*alarm.getAlarmTargetList*/
+	</select>
+	
+		
+	<!-- 알림 공지대상자 조회 -->
+	<select id="alarm.selectAlarmUsers" parameterClass="HashMap"
+		resultClass="HashMap">
+		SELECT T.*,  @RNUM := @RNUM + 1 AS rnum 
+		FROM (
+			SELECT A.SABUN AS perSabun, A.USR_NM AS perNm, A.OFFICE AS composition
+				   , (SELECT positionNm FROM erp.erp_per_position where positionCd = A.POSITION) AS position
+				   , C.B_CARD_YN as bCardYn
+				   , D.DEPTNM AS deptNm
+			FROM SYNERGYMAIN.IB_STAFF 		A			
+			LEFT JOIN BASE.BS_USER_PROFILE 	C 	ON C.USER_ID = A.S_NB
+			LEFT JOIN ERP.ERP_PER_DEPT 		D 	ON D.DEPTSEQ = A.TEAM
+			WHERE 1=1
+			 	AND A.SRT_CD &gt; '00000'
+		  		AND A.SRT_CD &lt;= '00200'
+		  		AND D.DELFLAG='N' 
+			<isEqual property="alarmTarget" compareValue="B_CARD" prepend="AND" >
+				C.B_CARD_YN = 'Y' AND C.B_CARD_CONTROL = 'Y'
+			</isEqual>
+			ORDER BY D.DEPTORDER ASC, A.STAT_SEQ, A.USR_NM ASC
+			) T,
+		 	( SELECT @RNUM :=  #offset#  ) R
+		<isNotEmpty prepend="" property="limit">
+			LIMIT #offset#, #limit#
+		</isNotEmpty>
+		
+		 /* alarm.selectAlarmUsers */
+	</select>
+	
+	<!-- 알림 공지 대상자 총 갯수 -->
+	<select id="alarm.selectAlarmUsersCount" parameterClass="HashMap"
+		resultClass="Integer">
+		SELECT COUNT(A.S_NB)
+			FROM SYNERGYMAIN.IB_STAFF A
+			LEFT JOIN BASE.BS_USER_PROFILE 	C ON C.USER_ID = A.S_NB
+			LEFT JOIN ERP.ERP_PER_DEPT 		D ON D.DEPTSEQ = A.TEAM
+			WHERE 1=1
+			 	AND A.SRT_CD &gt; '00000'
+				AND A.SRT_CD &lt;= '00200'
+				AND D.DELFLAG='N' 
+			<isEqual property="alarmTarget" compareValue="B_CARD" prepend="AND" >
+					C.B_CARD_YN = 'Y' AND C.B_CARD_CONTROL = 'Y'
+			</isEqual>
+					
+		 /* alarm.selectAlarmUsersCount */
+	</select>
+	 
+	 <!-- 소속 부서 리스트 조회 -->
+	 <select id="alarm.selectDeptList" resultClass="HashMap">
+	 	  SELECT DEPTSEQ AS deptSeq, DEPTNM  AS deptNm 
+	 	  FROM ERP.ERP_PER_DEPT 
+	 	  WHERE DELFLAG = 'N' ORDER BY DEPTORDER ASC
+	 	  
+	 	   /* alarm.selectDeptList */
+	 </select>
+	 
+</sqlMap>

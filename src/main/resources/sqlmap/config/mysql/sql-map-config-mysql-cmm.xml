@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMapConfig PUBLIC "-//iBATIS.com//DTD SQL Map Config 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-config-2.dtd">
+
+<sqlMapConfig>						
+	<!-- <sqlMap resource="sqlmap/cmm/CmmUse_SQL_Mysql.xml"/> -->		
+	<sqlMap resource="sqlmap/main/comCode.xml"/>		
+	<sqlMap resource="sqlmap/main/work.xml"/>
+	<sqlMap resource="sqlmap/main/company.xml"/>		
+	<sqlMap resource="sqlmap/main/person.xml"/>		
+	<sqlMap resource="sqlmap/main/stats.xml"/>
+	<sqlMap resource="sqlmap/main/statsPrivate.xml"/>
+	<sqlMap resource="sqlmap/main/statsPs.xml"/>
+	<sqlMap resource="sqlmap/main/card.xml"/>		
+	<sqlMap resource="sqlmap/main/car.xml"/>
+	<sqlMap resource="sqlmap/main/car2.xml"/>			
+	<sqlMap resource="sqlmap/main/personnel.xml"/>		
+	<sqlMap resource="sqlmap/main/bsnsPlan.xml"/>		
+	<sqlMap resource="sqlmap/main/management.xml"/>		
+	<sqlMap resource="sqlmap/main/recommend.xml"/>		
+	<sqlMap resource="sqlmap/main/selfImprovement.xml"/>		
+	<sqlMap resource="sqlmap/main/notice.xml"/>		
+	<sqlMap resource="sqlmap/main/network.xml" />
+	<sqlMap resource="sqlmap/main/reply.xml" />
+	<sqlMap resource="sqlmap/main/common.xml" />
+	
+	<sqlMap resource="sqlmap/main/LoginSQL.xml" />
+	<sqlMap resource="sqlmap/main/ScheduleSQL.xml" />
+	<sqlMap resource="sqlmap/main/FormDocSQL.xml" />
+	<sqlMap resource="sqlmap/main/CusSQL.xml" />
+	<sqlMap resource="sqlmap/main/BoardSQL.xml" />
+	
+	<sqlMap resource="sqlmap/main/batch.xml" />
+	<sqlMap resource="sqlmap/main/alarm.xml" />
+	<sqlMap resource="sqlmap/main/meetingRoom.xml" />
+	<sqlMap resource="sqlmap/main/adminSQL.xml" />
+	<sqlMap resource="sqlmap/main/workType.xml"/>
+	<sqlMap resource="sqlmap/main/file.xml" />
+	<sqlMap resource="sqlmap/main/sms.xml" />
+	<sqlMap resource="sqlmap/main/push.xml" />
+</sqlMapConfig>
+	
+	<!-- <sqlMap resource="sqlmap/cmm/File_SQL_Mysql.xml"/>	 -->

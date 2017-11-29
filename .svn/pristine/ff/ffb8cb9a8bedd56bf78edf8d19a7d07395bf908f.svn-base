@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="common">
+
+	<!-- 
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="carVO" type="ib.car.service.CarVO"/>
+	 -->
+	
+	
+	<!-- 공통코드 -->
+	<select id="common.selectCommonCode" remapResults="true" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+				  DTAIL_CD			as #code#
+				, CD_NM				as #name#
+		
+				, S_NB				as sNb
+				, MENU_CD 			as menuCd
+				, DTAIL_CD 			as dtailCd
+				, CD_NM 			as cdNm
+				, CD_DC 			as cdDc
+				, USE_AT 			as useAt
+				, CD_SORT 			as cdSort
+				
+			FROM IB_COMMON_CODE
+			WHERE 1=1
+			  AND USE_AT IS NULL
+			<isNotEmpty prepend="AND" property="menuCd">
+				<![CDATA[	MENU_CD = #menuCd# 		]]>
+			</isNotEmpty>
+			ORDER BY CD_SORT2 , DTAIL_CD ASC
+			
+		/* common.selectCommonCode */
+	</select>
+	
+	
+	<!-- 사원리스트 -->
+	<select id="common.selectStaffList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT a.s_nb			as staffSnb
+			  ,a.usr_nm			as usrNm
+		      ,a.usr_id			as usrId
+		      ,a.cus_id			as cusId
+		      ,a.sabun			as sabun
+		      ,a.position		as positionCd
+		      ,(SELECT positionNm FROM erp.erp_per_position where positionCd = a.position) as position
+		      ,a.srt_cd			as srtCd
+		      ,a.division		as division
+		      ,(select div_name from base.bs_division where div_code = a.division) as divisionNm 
+		      
+		      ,b.deptSeq		as deptSeq
+		      ,b.deptNm			as deptNm
+		      
+		FROM ib_staff			a
+		join erp.erp_per_dept	b on a.team = b.deptSeq
+		where 1=1
+		
+		<isNotEqual property="noStaff" compareValue="Y">
+		  and a.srt_cd &gt; '00000'
+		  and a.srt_cd &lt;= '00200'
+		</isNotEqual>
+		<isEqual property="noStaff" compareValue="Y">
+		  and (a.srt_cd = '00000' or a.srt_cd &gt; '00200')
+		</isEqual>
+		
+		 
+		  <isEqual property="division" compareValue="SYNERGY">
+		  	and	exists (
+						select 1
+						from erp.erp_per
+						where 1=1
+					    and delflag = 'N'
+						and persabun = a.sabun
+						)
+		  </isEqual>
+		  
+		<isNotEmpty prepend="AND" property="division">
+			division = #division#	
+		</isNotEmpty>				
+					
+		<isEqual property="nameOrder" compareValue="Y">
+		  order by a.usr_nm asc
+		</isEqual>
+		<isNotEqual property="nameOrder" compareValue="Y">
+		  order by b.deptOrder asc, b.deptSeq asc, a.stat_seq, a.usr_nm asc
+		</isNotEqual>
+		
+	
+		/* common.selectStaffList */
+	</select>
+	
+	
+	<!-- 사원리스트(이름정렬) -->
+	<select id="common.selectStaffListNameSort" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+			   A.S_NB			AS staffSnb
+			  ,A.USR_NM			AS usrNm
+		      ,A.USR_ID			AS usrId
+		      ,A.PHN_1			AS phone
+		      ,IFNULL((SELECT PERCOMTEL FROM ERP.ERP_PER WHERE A.SABUN = PERSABUN),'')		AS comPhone
+		      ,A.CUS_ID			AS cusId
+		      ,A.SABUN			AS sabun
+		      ,A.POSITION		AS positionCd
+		      ,(SELECT positionNm FROM erp.erp_per_position where positionCd = a.position) as position
+		      ,IFNULL((SELECT PEREMAIL FROM ERP.ERP_PER WHERE A.SABUN = PERSABUN),'')		AS email
+		      ,A.SRT_CD			AS srtCd
+		      ,A.DIVISION		AS division
+		      ,B.DEPTSEQ		AS deptSeq
+		      ,B.DEPTNM			AS deptNm
+		      
+		      ,B.DEPTSEQ		AS deptId
+		 	  ,A.S_NB			AS userId
+		 	  ,A.USR_NM			AS userName
+		 	  ,A.USR_NM			AS userNm
+		 	  
+		 	  
+		      ,IF(B.MANAGER=A.SABUN,1,0)	AS isManager		<!-- 팀장여부 -->
+		 	
+		 	  ,IFNULL(PROFILE.STATUS,'')   		   AS status
+        	  ,IFNULL(PROFILE.B_CARD_YN,'')   	   AS bCardYn
+              ,IFNULL(PROFILE.B_CARD_CONTROL,'')   AS bCardControl
+              
+              <!-- 푸쉬정보 -->
+              ,PROFILE.DEVICE_TOKEN				  AS deviceToken
+              ,PROFILE.DEVICE_TYPE				  AS deviceType
+              ,PROFILE.DEVICE_UUID				  AS deviceUuid
+              ,PROFILE.MEMO_PUSH_YN				  AS memoPushYn
+              ,PROFILE.MEMO_COMMENT_PUSH_YN		  AS memoCommentPushYn
+              ,PROFILE.DEAL_PUSH_YN				  AS dealPushYn
+              ,PROFILE.DEAL_COMMENT_PUSH_YN		  AS dealCommentPushYn
+              ,PROFILE.DEAL_STATUS_PUSH_YN		  AS dealStatusPushYn
+              ,PROFILE.DEAL_ANAL_PUSH_YN		  AS dealAnalPushYn
+              ,PROFILE.SCHEDULE_PUSH_YN			  AS schedulePushYn
+             ,(SELECT COUNT(*) FROM BASE.BS_PUSH_LOG WHERE RECV_ID = A.S_NB AND COUNT_YN = 'Y' AND SEND_RESULT = 1) AS badgeCnt
+             
+		FROM IB_STAFF			A
+		JOIN ERP.ERP_PER_DEPT	B ON A.TEAM = B.DEPTSEQ
+		LEFT OUTER JOIN BASE.BS_USER_PROFILE AS PROFILE ON A.S_NB = PROFILE.USER_ID
+		
+		WHERE 1=1
+		<isEmpty prepend="AND" property="outStaff"> 		 <!-- 퇴사자 조회 여부 -->		  
+		   A.SRT_CD &gt; '00000'
+		   AND A.SRT_CD &lt;= '00200'
+		</isEmpty>
+		
+		
+		<isEqual property="division" compareValue="SYNERGY"> <!-- division 이 시너지면 -->
+		  	AND	EXISTS (
+						SELECT 1
+						FROM ERP.ERP_PER
+						WHERE 1=1
+					    AND DELFLAG = 'N'
+						AND PERSABUN = A.SABUN
+						)
+		</isEqual>
+		<isNotEmpty prepend="AND" property="division"> <!-- division으로 검색 -->
+			DIVISION = #division#	
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="divEnable"> <!-- division 사용여부 -->
+			EXISTS (
+					SELECT 1
+					  FROM BASE.BS_DIVISION
+					  WHERE DIV_CODE = A.DIVISION
+					  AND ENABLE = #divEnable#
+				)
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="sabun">		<!--  사번에따른 유저검색 -->
+			SABUN IN (#sabun#)
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="usrId">		<!--  아이디에따른 유저검색 -->
+			USR_ID = #usrId#
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="userId">	<!--  userId에따른 유저검색(snb) -->
+			S_NB IN ($userId$)
+		</isNotEmpty>
+		
+		<isNotEmpty prepend="AND" property="sabunList">		<!--  사번에따른 유저검색 -->
+			SABUN IN ($sabunList$)
+		</isNotEmpty>
+		
+		<isEqual property="searchType" compareValue="card"> <!-- user_profile 에 법인카드 소지,관리대상 여부 검색조건 -->
+		  	AND PROFILE.B_CARD_YN = 'Y' AND PROFILE.B_CARD_CONTROL = 'Y'
+		</isEqual>
+		<isEqual property="searchType" compareValue="manager"> <!-- 팀장만  -->
+		  	AND B.MANAGER=A.SABUN
+		</isEqual>
+		<isEqual property="searchType" compareValue="analYn"> <!-- 분석자  -->
+		  	AND PROFILE.ANAL_YN='Y'
+		</isEqual>
+		
+		
+		<isNotEmpty prepend="AND" property="forPush">		<!--  푸쉬 정보 있는사람만 -->
+			
+			PROFILE.DEVICE_TOKEN != '' AND 	PROFILE.DEVICE_TOKEN IS NOT NULL 
+			AND PROFILE.DEVICE_UUID != '' AND 	PROFILE.DEVICE_UUID IS NOT NULL 
+			AND PROFILE.DEVICE_TYPE != '' AND 	PROFILE.DEVICE_TYPE IS NOT NULL 
+			
+			<isEqual property="pushType" compareValue="MEMO"> 			<!-- 메모받기  -->
+				AND PROFILE.MEMO_PUSH_YN 	= 'Y'
+			</isEqual>
+			
+			<isEqual property="pushType" compareValue="MEMOCOMMENT"> 	<!-- 메모 댓글 받기  -->
+				AND PROFILE.MEMO_COMMENT_PUSH_YN = 'Y'
+			</isEqual>
+			
+			<isEqual property="pushType" compareValue="DEAL"> 			<!-- 딜 받기  -->
+				AND PROFILE.DEAL_PUSH_YN = 'Y' 
+				
+				<isEqual property="dealType" compareValue="mezzL"> 		<!-- 메자닌 상장 일경우 해당사람만 -->
+				AND (PROFILE.MEZZ_L = 'Y' OR A.USR_ID = 'gjh')
+				</isEqual>
+				
+				<isEqual property="basicType" compareValue="N"> 		<!-- 프리 IPO 벤처 가 아니다 -->
+				AND (PROFILE.MEZZ_N = 'Y' OR A.USR_ID = 'gjh')
+				</isEqual>
+				
+			</isEqual>
+			
+			<isEqual property="pushType" compareValue="DEALCOMMENT"> 	<!-- 딜 댓글받기  -->
+				AND PROFILE.DEAL_COMMENT_PUSH_YN = 'Y'
+			</isEqual>
+			
+			<isEqual property="pushType" compareValue="DEALOPINION"> 	<!-- 딜 투자의견  -->
+				AND PROFILE.DEAL_COMMENT_PUSH_YN = 'Y'
+			</isEqual>
+			
+			<isEqual property="pushType" compareValue="DEALSTATUS"> 	<!-- 딜 상태변화 받기  -->
+				AND PROFILE.DEAL_STATUS_PUSH_YN = 'Y'
+			</isEqual>
+			
+			<isEqual property="pushType" compareValue="DEALANAL"> 		<!-- 딜 분석자 지정 받기  -->
+				AND PROFILE.DEAL_ANAL_PUSH_YN = 'Y'
+			</isEqual>
+			
+			<isEqual property="pushType" compareValue="SCHEDULE"> 		<!-- 일정 받기  -->
+				AND PROFILE.SCHEDULE_PUSH_YN = 'Y'
+			</isEqual>
+			
+		</isNotEmpty>
+		
+		<isNotEqual property="deptOrder" compareValue="Y">
+			<isEqual property="rankOrder" compareValue="Y">
+				ORDER BY A.STAT_SEQ, A.USR_NM ASC					<!-- 직급정렬 -->
+			</isEqual>
+			<isNotEqual property="rankOrder" compareValue="Y">
+		  		ORDER BY A.USR_NM ASC								<!-- 이름정렬 -->
+		  	</isNotEqual>
+		</isNotEqual>
+		<isEqual property="deptOrder" compareValue="Y">		  
+			ORDER BY B.DEPTORDER ASC, A.STAT_SEQ, A.USR_NM ASC		<!-- 부서정렬 -->
+		</isEqual>
+		
+		
+		/* common.selectStaffListNameSort */
+	</select>
+	
+	
+	<!-- division List -->
+	<select id="common.getSelectDivisionList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT DIV_ID 			AS divId
+		 	  ,DIV_CODE 		AS divCode
+			  ,DIV_NAME 		AS divName
+			  ,SORT 			AS sort
+			  ,ENABLE			AS enable
+			  
+			  ,DIV_CODE 		AS code
+			  ,DIV_NAME 		AS name
+			  
+			  ,CREATED_BY		AS createdBy
+			  ,CREATE_DATE 		AS createDate
+			  ,UPDATED_BY		AS updatedBy
+			  ,UPDATE_DATE 		AS updateDate	
+			
+		  FROM BASE.BS_DIVISION as division
+		 WHERE 1=1
+		 
+		<isEmpty prepend="AND" property="enable">
+			ENABLE = 'Y'	
+		</isEmpty>
+		<isNotEmpty prepend="AND" property="enable">
+			ENABLE = #enable#	
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="userCountChk">
+			exists ( SELECT 1 FROM synergymain.ib_staff WHERE division= division.div_code )
+		</isNotEmpty>
+		
+		 ORDER BY SORT ASC
+		 
+		/* common.getSelectDivisionList */
+	</select>
+	
+	
+	<!-- 부서 List -->
+	<select id="common.selectDeptList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT deptSeq				AS code
+			  ,deptNm				AS name
+			  
+		      ,deptSeq
+			  ,deptNm
+		      ,manager
+		      ,teamLeaderSabun
+		      ,deptOrder
+		      ,'0' 					AS parentDeptId
+	 		  ,deptSeq 				AS deptId
+	 		  ,CONCAT('D', deptSeq)	AS id
+	 		  ,'##'					AS parent
+	 		  ,'dept'				AS type
+		
+		FROM ERP.ERP_PER_DEPT
+		where 1=1
+		and delFlag = 'N'
+		
+		<isNotEmpty prepend="AND" property="deptSeq">
+            deptSeq = #deptSeq#
+        </isNotEmpty>
+        
+		 
+        ORDER BY deptOrder ASC;
+        
+		/* common.selectDeptList */
+	</select>
+	
+	<!-- 회사목록  -->
+	<select id="common.selectCompanyList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT 
+				  HQ_ID			AS hqId
+				, COMPANY_ID	AS companyId
+				, HQ_NAME		AS hqName
+				, ADDRESS		AS address
+				
+		FROM BASE.BS_COMPANY_HQ
+		WHERE 1=1
+		
+		<isNotEmpty prepend="AND" property="companyId">
+			company_id = #companyId#
+		</isNotEmpty>
+		
+		ORDER BY SORT ASC, HQ_ID ASC
+		
+		/* common.selectCompanyList */	
+	</select>
+	
+	<!-- IB에서 사용하는 전역 파라미터 정보 조회  -->
+	<select id="common.selectGlobalParameters" parameterClass="String" resultClass="String">
+		SELECT
+			VALUE	
+		FROM IB_GLOBAL_PARAM
+		WHERE 
+			DEL_FLAG='N' AND
+			PARAM = #param#						
+	</select>
+	
+	
+	<!-- 시스템 개선요청 안읽은 건수  -->
+	<select id="common.selectSystemReqNoReadCnt" parameterClass="String" resultClass="String">
+		SELECT
+			SUM(IF((SELECT COUNT(*)
+					  FROM IB_BOARDREADLOG
+	                 WHERE 1=1
+					   AND GrpCd = a.GrpCd AND CateCd = a.CateCd
+					   AND WriteCd = a.WriteCd
+	                   AND PerSabun = #sabun#
+	                   AND ReadDate &gt; IFNULL(a.editdate, a.regdate)) &gt; 0, 0, 1 )) reqNoReadCnt
+	            
+	      FROM IB_BOARD A
+		  LEFT JOIN IB_BOARDCATE B ON A.GrpCd = B.GrpCd
+	        					  AND A.CateCd = B.CateCd
+		 WHERE B.DelFlag = 'N' AND A.GrpCd = '5'
+		   AND A.DelFlag = 'N'
+		
+		/* common.selectSystemReqNoReadCnt */	
+	</select>
+	
+		
+	<!-- 직급목록  -->
+	<select id="common.selectPositionList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT positionCd
+			 , positionNm
+			  
+		  FROM ERP.ERP_PER_POSITION
+		  
+		 WHERE DELFLAG = 'N'
+		 ORDER BY POSITIONORDER ASC
+		 		
+		/* common.selectPositionList */	
+	</select>
+	
+</sqlMap>

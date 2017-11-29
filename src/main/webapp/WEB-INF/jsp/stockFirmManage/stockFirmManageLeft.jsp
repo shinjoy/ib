@@ -1,0 +1,181 @@
+<%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags"%>
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main</title>
+<link href="<c:url value='/css/leftMenu.css'/>" rel="stylesheet" type="text/css">
+
+<link href="<c:url value='/css/content.css'/>" rel="stylesheet" type="text/css">
+<link href="<c:url value='/css/btn.css'/>" rel="stylesheet" type="text/css">
+
+<script type="text/JavaScript" src="<c:url value='/js/html5.js'/>"></script>
+<script type="text/JavaScript" src="<c:url value='/js/jquery.min.js'/>" ></script>
+
+<script>var contextRoot="${pageContext.request.contextPath}";</script>
+<script type="text/JavaScript" src="<c:url value='/js/sys/utils.js'/>" ></script>
+
+<script>
+
+$(document).ready(function(){
+	//왼쪽메뉴 iframe width 조정
+	//$("#leftFrame", parent.document).css('width', '160px');
+	//$("#main", parent.document).css('margin-left', '165px');
+});
+
+
+function selectStockMenu(idx){
+	if("A"==idx) parent.mainFrame.location.href = "main.do";
+	else if("B"==idx) parent.mainFrame.location.href = "selectStaffNstockIB.do";
+	else if("C"==idx) parent.mainFrame.location.href = "selectStaffNstockIBNew.do";
+	
+	//담당자(사원리스트) 숨김여부
+	if("C"==idx){		
+		$('#dvUserList').show();	//노출
+	}else{
+		$('#dvUserList').hide();	//숨기기
+	}
+}
+
+
+//담당자별 증권사 IB 고객 보기(본 페이지 재정의)
+var g_selUserNm;		//검색 선택한 담당자(직원) 이름							/* global variables (for sorting)*/
+var g_selUserId;		//검색 선택한 담당자(직원) id							/* global variables (for sorting)*/
+var g_sortCol = '';		//소팅 컬럼
+var g_sortAD = '';		//소팅 방향(A or D)
+function selectStockFirmIbNew(cstName,th,menu,usrId,sortCol,isStockOnly){
+	/*
+	var url = "../stockFirmManage/selectStockFirmIB.do";
+	if("B"==menu) url = "../stockFirmManage/selectStockFirmIBofStaff.do";
+	if("C"==menu) url = "../stockFirmManage/selectStockFirmIBofStaffNew.do";
+	*/
+	if("C"==menu) url = "../stockFirmManage/selectStockFirmIBofStaffNew.do";		//"C" 타입만을 위한 함수(selectStockFirmIbNew)이므로
+	
+	g_selUserNm = cstName;		//global vairable setting
+	g_selUserId = usrId;		//global vairable setting
+	
+	
+	//sorting 방향
+	if(g_sortAD == '' || g_sortAD == 'D' || g_sortCol != sortCol){
+		g_sortAD = 'A';
+	}else{
+		g_sortAD = 'D';
+	}
+	//sorting 컬럼
+	if(sortCol == null || sortCol == ''){
+		g_sortCol = '';
+	}else{
+		g_sortCol = sortCol;
+	}
+	//
+	if(isStockOnly == undefined){
+		isStockOnly = $('input:checkbox[name=checkStockCpn]', parent.mainFrame.document).is(':checked')?'Y':'';
+	}
+	
+	$.ajax({
+		type:"POST",        //POST GET
+		url:url,     		//PAGEURL
+		data : ({
+			cstNm: 		cstName,
+			usrId: 		usrId,
+			
+			sortCol:	g_sortCol,
+			sortAD:		(g_sortAD == 'D'?'DESC':'ASC'),
+			
+			isStock:	isStockOnly
+		}),
+		contentType : "application/x-www-form-urlencoded; charset=UTF-8",
+		timeout : 30000,
+		cache : false,        //true, false
+		success: function whenSuccess(arg){  //SUCCESS FUNCTION
+			$("#stockFirmIBs", parent.mainFrame.document).html(arg);
+			if(th!=null & th!=''){
+				$('.t_skin04_cstNcpn tr.LK1st').css('background-color','');
+				$('.t_skin04_cstNcpn tr.LK1st').css('color','black');
+				$(th).css('background-color','#75c5de');
+				$(th).css('color','white');
+			}
+			
+			
+			//sorting 아이콘 적용
+			if(!isEmpty(g_sortCol)){
+				var btnShape = '▽';
+				
+				if(g_sortAD == 'A'){
+					btnShape = '▲';
+				}else{
+					btnShape = '▼';
+				}
+				$('#sortBtn'+g_sortCol, parent.mainFrame.document).html(btnShape);		//모양세팅
+			}
+			
+		}
+		,beforeSend:function(){
+	        // 로딩 이미지 보여주기 처리
+	        $('.wrap-loading', parent.mainFrame.document).removeClass('display-none');
+	    }
+	    ,complete:function(){
+	    	// 로딩 이미지 감추기 처리
+	        $('.wrap-loading', parent.mainFrame.document).addClass('display-none');	 
+	    },
+		error: function whenError(x,e){    //ERROR FUNCTION
+			ajaxErrorAlert(x,e);
+		}
+	});
+}
+
+//담당자별 증권사IB 고객 결과 화면에서 소팅 요청
+function selectStockFirmIbNewToSort(Col){
+	
+	//위 함수 호출
+	selectStockFirmIbNew(g_selUserNm,null,'C',g_selUserId,Col,$('input:checkbox[name=checkStockCpn]', parent.mainFrame.document).is(':checked')?'Y':'');
+}
+
+</script>
+</head>
+<body>
+<c:if test="${not empty userLoginInfo}">
+	<header>
+	</header>
+	<section>
+		<article>
+		<div id="menubody">
+		<ul class="left-list">
+			<li><a onclick="selectStockMenu('B');">시너지 직원별</a></li>
+			<li><a onclick="selectStockMenu('A');">증권사별</a></li>
+			<li><a onclick="selectStockMenu('C');">담당자별 (NEW)</a></li>
+		</ul>
+		</div>
+		
+		<div id="dvUserList" style="display:none;padding-left:21px;padding-top:30px;">
+		<div id="staffName" style="width:100px;height:700px;overflow-y:scroll;overflow-x:hidden;border:2px solid gray;">
+			<table width="100%" align=center class="t_skin04_cstNcpn">
+				<tr style="padding:5px 7px;border-bottom:1px solid #EEE;font-size:11px;">
+					<td class="cent bgYlw" height="30"><b>담당자</b></td>
+				</tr>
+			
+				<c:forEach var="staff" items="${userList}">
+				<tr class="link LK1st" onclick="selectStockFirmIbNew('${staff.usrNm }',this,'C','${staff.usrId }');"><td align="center" style="border-bottom:1px solid #EEE;font-size:11px;padding:5px 7px;width:113px;">
+					${staff.usrNm }
+				</td></tr>
+				</c:forEach>
+				
+				<tr class="link LK1st" onclick="selectStockFirmIbNew('notyet',this,'C','notyet');" style="padding:5px 7px;border-bottom:1px solid #EEE;font-size:11px;">
+					<td class="cent" height="30" ><b>&lt;미지정&gt;</b></td>
+				</tr>
+			</table>
+		</div>
+		</div>
+		
+		</article>
+	</section>
+</c:if>
+<c:if test="${empty userLoginInfo}">
+	<h3>로그인 하십시요.</h3>
+</c:if>
+</body>
+</html>

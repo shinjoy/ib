@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="car2">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<!-- 차량 이름  -->
+	<select id="car2.selectCarName" parameterClass="HashMap" resultClass="java.lang.String">
+		<![CDATA[
+			SELECT 
+				
+					CONCAT(car_number ,'-',car_model)
+				
+			  FROM 				base.BS_CAR_LIST  
+			  WHERE car_id=#carId#
+			
+
+		]]>
+		
+	</select>
+	
+	
+	<!-- 유저의 차량 리스트  -->
+	<select id="car2.selectCarList" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT 
+					 cl.car_id 						AS carId
+					,IFNULL(cl.asset_id,'0') 		AS assetId
+					,cl.car_nick 					AS carNick
+					,cl.car_number 					AS carNumber
+					,cl.car_model					AS carModel	
+					,cl.car_model					AS carOrgModel	
+					,cl.owned						AS owned	
+					,cl.manager_id 					AS managerId					
+					,IFNULL(am.asset_name,'')  		AS assetName
+					,hq.hq_name     				AS hqName
+					,hq.reg_number  				AS regNumber
+					,( 
+						CASE   
+						WHEN (SELECT car_Id FROM base.BS_CAR_WORKLOG WHERE user_id = #sNb#  ORDER BY start_time DESC,worklog_id DESC  limit 1) = cl.car_Id  THEN 1 
+                      	WHEN cl.manager_id = #sNb# THEN 2
+                     	WHEN cl.attr1 = 'Y' THEN 3
+                     	ELSE 4 END
+               		 )	AS sort
+					
+					
+			  FROM 				base.BS_CAR_LIST      AS cl  
+			  LEFT OUTER JOIN	base.EA_ASSET_MASTER  AS am ON  am.asset_id = cl.asset_id 
+			  LEFT OUTER JOIN   base.BS_COMPANY_HQ    AS hq ON  hq.hq_id = am.own_company
+		]]>	 
+			  <dynamic prepend="WHERE">
+			  	<isNotEmpty prepend="AND" property="enable">
+			  		cl.enable = #enable#
+			  	</isNotEmpty>
+			  	<isNotEmpty prepend="AND" property="owned">
+			  		cl.owned = #owned#
+			  	</isNotEmpty>
+			  	
+			  	<isNotEmpty prepend="AND" property="belongCompany">
+			  		cl.car_nick != '7216'
+			  		AND cl.share_yn ='Y'
+			  		AND
+			  			CASE WHEN (#hqId# = 1 OR #hqId# = 2)
+			  			 	 THEN (hq.HQ_ID = 1 OR hq.HQ_ID = 2)
+			  				 ELSE hq.HQ_ID = #hqId# 
+			  		 	END
+			  	</isNotEmpty>
+			  	
+			  </dynamic>
+			  ORDER BY sort ASC, owned ASC
+
+		
+		
+	</select>
+	<!-- 차량 로그 리스트 -->
+	<select id="car2.selectCarLogList" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT
+					log.worklog_id AS worklogId
+					,log.car_id AS carId
+					,log.user_id AS userId
+					,log.schedule_id AS scheduleId
+					,log.af_mileage  AS afMileage
+					,CONCAT (
+								IFNULL((SELECT if(ScheArea='',ScheTitle,ScheArea)as ScheTitle
+									FROM erp.erp_schedule
+									WHERE  ScheSeq= log.schedule_id ),'')
+                                    ,' '
+									,log.MEMO
+            				
+					)as memo
+					,DATE_FORMAT(log.start_time, '%Y-%m-%d') as startTime
+					,user.name as userNm
+					,team.deptNm
+					,log.business_yn AS businessYn
+					,(
+					  IFNULL((SELECT af_mileage 
+					 	     FROM base.BS_CAR_WORKLOG 
+					 		 WHERE af_mileage < log.af_mileage AND car_id = #carId#
+					  	     ORDER BY af_mileage DESC limit 1),0)
+					 ) AS beMileage
+					
+					
+			  FROM  base.BS_CAR_WORKLOG AS log
+			  LEFT OUTER JOIN base.BS_USER_MASTER AS user ON user.user_id = log.user_id  
+			  LEFT OUTER JOIN synergymain.IB_STAFF AS staff ON user.user_id = staff.s_nb 
+			  LEFT OUTER JOIN erp.ERP_PER_DEPT AS team ON staff.team=team.deptSeq  ]]>
+		
+		<dynamic prepend="WHERE">
+            <isEmpty prepend="AND" property="endDay">
+				<![CDATA[	DATE_FORMAT(log.start_time,'%Y-%m')= #selectDay#		]]>
+			</isEmpty>
+			  <isNotEmpty prepend="AND" property="endDay">
+				<![CDATA[	DATE_FORMAT(log.start_time,'%Y-%m-%d') BETWEEN #selectDay# AND #endDay#		]]>
+			</isNotEmpty>
+            <isNotEmpty prepend="AND" property="carId">
+				<![CDATA[	log.car_id = #carId# 		]]>
+			</isNotEmpty>
+		</dynamic>
+
+		<dynamic prepend="ORDER BY">
+            log.af_mileage DESC,log.start_time DESC 
+		</dynamic>
+	</select>
+	
+	<!-- 차량 로그 리스트 Limit 10 -->
+	<select id="car2.selectLimitCarLogList" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT
+					 log.WORKLOG_ID 		AS worklogId
+					,log.CAR_ID 			AS carId
+					
+					,(
+						SELECT CONCAT(CAR_NUMBER ,'-',CAR_MODEL)
+					 	FROM base.BS_CAR_LIST  
+			 		  	WHERE CAR_ID=log.CAR_ID 
+			 		  )						AS carNm
+			 		  
+					,log.USER_ID 			AS userId
+					,log.SCHEDULE_ID 		AS scheduleId
+					,log.AF_MILEAGE  		AS afMileage
+					,CONCAT (
+							IFNULL((SELECT CONCAT(ScheTitle) 
+									FROM erp.ERP_SCHEDULE
+									WHERE log.SCHEDULE_ID = ScheSeq),'')
+            				,' '
+            				,log.MEMO
+            				
+					) AS memo
+					,DATE_FORMAT(log.START_TIME, '%Y-%m-%d') 	AS startTime
+					,DATE_FORMAT(log.START_TIME, '%H:%i:%s')	AS startOnlyTime
+					,user.NAME 									AS userNm
+					,team.DEPTNM								AS deptNm
+					,log.BUSINESS_YN 							AS businessYn
+					,(
+					  IFNULL((SELECT AF_MILEAGE 
+					 	     	FROM base.BS_CAR_WORKLOG 
+					 		 	WHERE AF_MILEAGE < log.AF_MILEAGE AND CAR_ID = #carId#
+					  	    	ORDER BY AF_MILEAGE DESC LIMIT 1),0)
+					 ) AS beMileage
+					
+					
+			  FROM  base.BS_CAR_WORKLOG AS log
+			  LEFT OUTER JOIN base.BS_USER_MASTER AS user ON user.USER_ID = log.USER_ID  
+			  LEFT OUTER JOIN synergymain.IB_STAFF AS staff ON user.USER_ID = staff.S_NB 
+			  LEFT OUTER JOIN erp.ERP_PER_DEPT AS team ON staff.TEAM=team.deptSeq  ]]>
+		
+			WHERE 1=1
+			
+            <isNotEmpty prepend="AND" property="carId">
+				<![CDATA[	log.car_id = #carId# 		]]>
+			</isNotEmpty>
+			
+			<isNotEmpty prepend="AND" property="selectMonth">
+				DATE_FORMAT(LOG.START_TIME, '%Y-%m') = #selectMonth#
+			</isNotEmpty>
+			
+			<isNotEmpty prepend="AND" property="selectDay">
+				DATE_FORMAT(LOG.START_TIME, '%Y-%m-%d') = #selectDay#
+			</isNotEmpty>
+		
+
+		<dynamic prepend="ORDER BY">
+            log.af_mileage DESC,log.start_time DESC LIMIT $limitCount$
+		</dynamic>
+	</select>
+	
+	<!-- 해당 아이디 스케쥴리스트-->
+	<select id="car2.selectScheList" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[   
+				SELECT 
+					DISTINCT scheEDate AS ScheEDate
+					,sche.scheSeq AS ScheSeq
+					,CONCAT (ScheEMonth,'/',ScheEDay,' ',ScheETimeAMPM,' ',ScheETime,' ',ScheTitle) AS ScheTitle
+					,scheEDate AS ScheEDate
+					,ScheETimeAMPM AS ScheETimeAMPM
+					,scheETime AS ScheETime
+					,scheEMonth AS ScheEMonth
+					,scheEDay AS ScheEDay
+					,scheTitle AS orgScheTitle
+				 	,(CASE WHEN length(IFNULL(carNum,0))<4  THEN 0 ELSE 1 END) AS carYn
+				 	,IFNULL(company,'') as company
+					,IFNULL((select cpn_nm from ib_company where s_nb = company_id),'') as companyNm
+					,IFNULL(customer_id,'') as customerId
+					,IFNULL(customer,'') as customer
+				FROM ERP.ERP_SCHEDULE as sche
+				LEFT OUTER JOIN ERP.ERP_SCHEDULEENTRY AS entry ON entry.scheSeq = sche.scheSeq 
+				WHERE 1 =1
+				]]>
+				<isNotEmpty prepend="AND" property="sNb">	<!-- 차량일지에서 사용 -->
+				<![CDATA[
+				   (scheEDate between DATE_ADD(#date#, INTERVAL -3 DAY) AND DATE_ADD(#date#, INTERVAL 3 DAY))
+				   AND scheEDate <= SYSDATE()  	
+				   AND scheType NOT IN ('Holiday','Private','Notice','Schedule','Invest','Mt_inside')
+				   AND
+				   sche.scheSeq NOT IN
+			          (
+						SELECT schedule_id 
+						FROM BASE.BS_CAR_WORKLOG 
+						WHERE user_id=#sNb# AND schedule_id != 0
+					  )
+				]]>
+				</isNotEmpty>	
+				<isEmpty prepend="AND" property="sNb">		<!-- 지출에서 일정리스트 -->
+					scheEDate = #date# 
+					<isNotEmpty prepend="AND" property="scheduleType">
+						CASE #scheduleType# WHEN '20' THEN  scheType = 'Mt_dinner'
+						WHEN '30' THEN  scheType = 'Mt_dinner'  
+						WHEN '10' THEN  scheType = 'Mt_lunch'       
+					    ELSE scheType NOT IN ('Holiday','Private','Notice','Invest','Mt_inside')  END
+					</isNotEmpty>
+				</isEmpty>
+				
+				<isEmpty prepend="AND" property="sNb">		<!-- 지출에서 일정리스트 -->
+					(sche.perSabun=#sabun#  and sche.delflag = 'N' 
+				     OR entry.perSabun = #sabun# AND entry.delflag = 'N') 
+				</isEmpty>
+				<isNotEmpty prepend="AND" property="sNb">	<!-- 차량일지에서 사용 -->
+					 sche.perSabun=#sabun#  and sche.delflag = 'N' 
+				</isNotEmpty>
+				ORDER BY scheEDate DESC
+			/* car2.selectScheList */
+	</select>
+	
+	
+	<!-- 차량 운행일지 등록 -->
+	<insert id="car2.intsertCarLog" parameterClass="HashMap">
+		INSERT INTO base.BS_CAR_WORKLOG(
+							 car_id
+							,user_id
+							,af_mileage
+							,start_time
+							,end_time
+							,memo
+							,create_date
+							,created_by
+							,update_date
+							,updated_by
+							,schedule_id
+							,business_yn
+						)VALUES(
+							#carId#
+							,#sNb#
+							,#totalDistance#
+							<isEqual property="scheSeq" compareValue="0">  
+								<![CDATA[ 
+								    ,str_to_date(#useDate#, '%Y-%m-%d')
+									,str_to_date(#useDate# '23:59:59', '%Y-%m-%d %H:%i:%s')
+								]]>
+							</isEqual>
+							<isNotEqual property="scheSeq" compareValue="0">  
+								<![CDATA[   
+									,str_to_date((SELECT concat(scheEDate,' ',scheETime,':00 ',scheETimeAMPM) FROM erp.erp_schedule WHERE scheSeq =#scheSeq#), '%Y-%m-%d  %l:%i:%S %p')
+									,str_to_date((SELECT concat(scheEDate,' ',scheETime,':00 ',scheETimeAMPM) FROM erp.erp_schedule WHERE scheSeq =#scheSeq#), '%Y-%m-%d  %l:%i:%S %p')
+								]]>
+							</isNotEqual>
+							,#memo#
+							,now()
+							,#sNb#
+							,now()
+							,#sNb#
+							,#scheSeq#
+							,#type#
+						)
+		
+		<selectKey resultClass="int" type="post" keyProperty="seq">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<!-- 맞는 값인지 판별  -->
+	<select id="car2.chkDistance" parameterClass="HashMap"  resultClass="HashMap">
+			<![CDATA[
+			
+			SELECT  IFNULL(
+							(SELECT af_mileage FROM base.BS_CAR_WORKLOG 
+								WHERE DATE_FORMAT(start_time,'%Y-%m-%d') < #useDate# AND car_id = #carId#
+								ORDER BY af_mileage DESC limit 1
+						    ) 
+						    ,-1
+					)AS beDayMile,
+					IFNULL(
+							(SELECT af_mileage FROM base.BS_CAR_WORKLOG
+									WHERE #useDate#  < DATE_FORMAT(start_time,'%Y-%m-%d') AND car_id = #carId#
+									ORDER BY af_mileage ASC limit 1
+			       			 ) 
+			       			 ,-1
+			       	)AS afDayMile,
+			       	IFNULL(
+							(SELECT af_mileage FROM base.BS_CAR_WORKLOG
+									WHERE #useDate#  = DATE_FORMAT(start_time,'%Y-%m-%d')  AND car_id = #carId# AND af_mileage = #totalDistance#
+									ORDER BY af_mileage ASC limit 1
+			       			 ) 
+			       			 ,-1
+			       	)AS nowDayMile		 
+			 ]]>
+	</select>	
+	<!-- 가장 최근 조건 가져오기  -->
+	<select id="car2.maxDistance" parameterClass="HashMap"  resultClass="java.lang.String">
+			<![CDATA[
+				SELECT af_mileage 
+						FROM base.BS_CAR_WORKLOG 
+				
+			]]>
+			<isEqual property="scheSeq" compareValue="0">  
+				<![CDATA[ WHERE  STR_TO_DATE(end_time, '%Y-%m-%d') <=STR_TO_DATE(#useDate#, '%Y-%m-%d')]]>
+			</isEqual>
+			<isNotEqual property="scheSeq" compareValue="0">  
+				<![CDATA[ WHERE STR_TO_DATE((SELECT concat(scheEDate,' ',scheETime,':00 ',scheETimeAMPM,'') FROM erp.erp_schedule WHERE scheSeq =#scheSeq#), '%Y-%m-%d  %l:%i:%S %p' )
+					  		  > STR_TO_DATE(end_time, '%Y-%m-%d  %H:%i:%S' ) ]]>
+			</isNotEqual>
+				AND car_id=#carId#
+				ORDER BY af_mileage DESC limit 1;
+	</select>
+	
+</sqlMap>

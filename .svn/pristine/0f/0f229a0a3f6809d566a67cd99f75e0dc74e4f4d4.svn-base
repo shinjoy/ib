@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="meetingRoom">
+
+
+	<!-- 회의실 내역  -->
+	<select id="meetingRoom.getMeetingRoomList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+			 meet.MEETING_ROOM_ID			AS meetingRoomId			
+			,meet.MEETING_ROOM_NM			AS meetingRoomNm
+			,meet.MEETING_ROOM_NM_S			AS meetingRoomNmS
+			,meet.GROUP_CODE				AS groupCode
+			,meet.MEETING_ROOM_LOCATION		AS meetingRoomLocation
+			,meet.SORT						AS sort
+			,meet.TITLE_COLOR				AS titleColor
+			,meet.DESCRIPTION				AS description
+			,meet.ENABLE					AS enable
+			,meet.CREATED_BY				AS createdBy
+			,meet.CREATE_DATE				AS createDate
+			,(SELECT USR_NM FROM IB_STAFF WHERE S_NB = meet.CREATED_BY)		AS createdNm
+
+			,meet.MEETING_ROOM_ID			AS id
+    		,meet.MEETING_ROOM_NM			AS title
+			,meet.TITLE_COLOR				AS textColor
+
+		FROM BASE.BS_MEETING_ROOM 			AS meet
+		WHERE 1=1
+
+		<isNotEmpty prepend="AND" property="meetingRoomId">
+			meet.MEETING_ROOM_ID = #meetingRoomId#
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="enable">
+			meet.ENABLE = #enable#
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="search">
+			meet.MEETING_ROOM_NM LIKE CONCAT('%',#search#,'%')
+		</isNotEmpty>
+
+		<isNotEmpty property="sortCol">
+			ORDER BY $sortCol$  $sortVal$
+		</isNotEmpty>
+
+		<isEmpty property="sortCol">
+			ORDER BY meet.SORT ASC
+		</isEmpty>
+		
+		/* meetingRoom.getMeetingRoomList */
+	</select>
+	
+	<!-- 선택한 회의실 정보 20170907 ksm -->
+	<select id="meetingRoom.getMeetingRoomInfo" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+			 meet.MEETING_ROOM_ID			AS meetingRoomId			
+			,meet.MEETING_ROOM_NM			AS meetingRoomNm
+
+		FROM BASE.BS_MEETING_ROOM 			AS meet
+		
+		WHERE meet.MEETING_ROOM_ID 			= #meetingRoomId#
+		
+		/* meetingRoom.getMeetingRoomInfo */
+	</select>
+
+
+	<!-- 회의실등록 -->
+	<insert id="meetingRoom.intsertMeetingRoom" parameterClass="HashMap">
+		INSERT INTO BASE.BS_MEETING_ROOM (
+
+							 MEETING_ROOM_NM
+							,MEETING_ROOM_NM_S
+							,MEETING_ROOM_LOCATION
+							,SORT
+							,DESCRIPTION
+							,TITLE_COLOR
+							,ENABLE
+							,CREATED_BY
+							,CREATE_DATE
+							,UPDATED_BY
+							,UPDATE_DATE
+
+						)VALUES(
+							 #meetingRoomNm#
+							,#meetingRoomNmS#
+							,#meetingRoomLocation#
+
+							,#sort#
+							,#description#
+							,#titleColor#
+							,#enable#
+							,#userSeq#
+							,now()
+							,#userSeq#
+							,now()
+						)
+
+		<selectKey resultClass="int" type="post" keyProperty="meetingRoomId">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		
+		/* meetingRoom.intsertMeetingRoom */
+	</insert>
+	
+
+	<!-- 회의실수정 -->
+	<update id="meetingRoom.updateMeetingRoom">
+		UPDATE BASE.BS_MEETING_ROOM
+
+			SET    SORT 					= #sort#
+
+				<isNotEmpty property="meetingRoomNm">
+			      ,MEETING_ROOM_NM 			= #meetingRoomNm#
+			  	</isNotEmpty>
+			  	  ,MEETING_ROOM_NM_S		= #meetingRoomNmS#
+			  	
+			  	  ,TITLE_COLOR				= #titleColor#
+			      ,MEETING_ROOM_LOCATION 	= #meetingRoomLocation#
+				  ,DESCRIPTION 				= #description#
+				  ,ENABLE 					= #enable#
+				  ,UPDATE_DATE 				= now()
+			      ,UPDATED_BY  				= #userSeq#
+
+
+		WHERE MEETING_ROOM_ID	= #meetingRoomId#
+			
+		/* meetingRoom.updateMeetingRoom */
+	</update>
+
+
+	<!-- 회의실 예약 내역  -->
+	<select id="meetingRoom.getMeetingRoomRsvList" parameterClass="HashMap" resultClass="HashMap">
+		
+			SELECT 
+					 RSV_ID				AS id
+					,MEETING_ROOM_ID 	AS resourceId
+					,CONCAT(IF(rsv.SCHEDULE_ID != 0 ,(SELECT scheTitle FROM ERP.ERP_SCHEDULE WHERE SCHESEQ = rsv.SCHEDULE_ID), rsv.COMMENT ) ,' - ' ,staff.USR_NM) 	AS title
+					,CONCAT(rsv.START_DATE,'T',rsv.START_TIME) 	AS start 
+					,CONCAT(rsv.END_DATE,'T',rsv.END_TIME) 		AS end 
+					
+					,RSV_ID				AS rsvId
+					
+					,rsv.MEETING_ROOM_ID 	AS meetingRoomId
+					
+					,IFNULL((SELECT MEETING_ROOM_NM_S FROM BASE.BS_MEETING_ROOM WHERE MEETING_ROOM_ID = rsv.MEETING_ROOM_ID),'') AS meetingRoomNmS
+					
+					,DATE_FORMAT(rsv.START_DATE,'%Y-%m-%d')		AS startDate
+					,DATE_FORMAT(rsv.END_DATE,'%Y-%m-%d')		AS endDate
+					,DATE_FORMAT(rsv.START_TIME, '%H:%i:%S')  	AS startTime
+				    ,DATE_FORMAT(rsv.END_TIME, '%H:%i:%S')		AS endTime
+				    
+					,rsv.SCHEDULE_ID 		AS scheduleId
+					,rsv.COMMENT  			AS comment
+					,rsv.RSV_USER_ID 		AS rsvUserId
+					,rsv.CREATE_DATE 		AS createDate
+					,rsv.CREATED_BY			AS createdBy
+					,rsv.UPDATE_DATE 		AS updateDate
+					,rsv.UPDATED_BY			AS updatedBy
+					
+					,staff.USR_NM 		AS rsvUserNm
+					,staff.SABUN		AS rsvSabun
+					,(SELECT USR_NM FROM IB_STAFF WHERE S_NB = rsv.CREATED_BY) AS regNm
+					
+					
+					,DATE_FORMAT(rsv.START_TIME,'%H:%i')  		AS showStartTime
+					,DATE_FORMAT(rsv.END_TIME,'%H:%i')			AS showEndTime
+					
+					
+			  FROM 	BASE.BS_MEETINGROOM_RESERVATION AS rsv
+			  JOIN 	IB_STAFF AS staff	ON 	staff.S_NB = rsv.RSV_USER_ID
+			  WHERE 1=1
+			  
+			  <isNotEmpty prepend="AND" property="meetingRoomId">
+			  		MEETING_ROOM_ID = #meetingRoomId#
+			  </isNotEmpty>
+			  
+			  <isNotEmpty prepend="AND" property="scheduleId">
+			  		SCHEDULE_ID = #scheduleId#
+			  </isNotEmpty>
+			  
+			  <isNotEmpty prepend="AND" property="choiceDate">
+			  		START_DATE = #choiceDate# 
+			  </isNotEmpty>
+			  
+			  <isNotEmpty prepend="AND" property="startDate">
+			  		START_DATE BETWEEN #startDate# AND #endDate#
+			  </isNotEmpty>
+			  
+			  <isNotEmpty prepend="AND" property="enable">
+		  			(
+		  					  (#rsvStartTime#  &gt; START_TIME AND #rsvStartTime# &lt; END_TIME)
+		  				OR    (#rsvEndTime#    &gt; START_TIME AND #rsvEndTime# &lt; END_TIME)		
+		  				OR    ( START_TIME    &gt; #rsvStartTime# AND END_TIME &lt;= #rsvEndTime#)		
+		  						
+		  			)
+			  </isNotEmpty>
+			  
+			  <isNotEmpty prepend="AND" property="rsvId">
+		  			RSV_ID != #rsvId#
+			  </isNotEmpty>
+			  
+			 
+			ORDER BY START_TIME ASC	
+			
+
+		/* meetingRoom.getMeetingRoomRsvList */
+	</select>
+	
+	<!-- 스케줄 내역  -->
+	<select id="meetingRoom.getScheduleList" parameterClass="HashMap" resultClass="HashMap">
+		
+			SELECT 
+					 DISTINCT sche.SCHESEQ 	AS scheSeq
+					,SCHETITLE 				AS scheTitle
+					
+					,SCHEEDATE 				AS scheEDate
+					,SCHEETIMEAMPM 			AS scheETimeAMPM
+					,SCHEETIME 				AS scheETime
+					
+					
+					,SCHESDATE 				AS scheSDate
+					,SCHESTIMEAMPM 			AS scheSTimeAMPM
+					,SCHESTIME 				AS scheSTime
+					
+					,SCHEEMONTH				AS scheEMonth
+					,SCHEEDAY				AS scheEDay
+					,SCHESMONTH				AS scheSMonth
+					,SCHESDAY				AS scheSDay
+				
+					
+					,DATE_FORMAT(STR_TO_DATE(CONCAT(SCHEETIME,':00 ',SCHEETIMEAMPM), '%l:%i:%S %p'), '%H:%i') AS endTime
+					,DATE_FORMAT(STR_TO_DATE(CONCAT(SCHESTIME,':00 ',SCHESTIMEAMPM), '%l:%i:%S %p'), '%H:%i') AS startTime
+			
+			FROM ERP.ERP_SCHEDULE AS sche
+			LEFT OUTER JOIN ERP.ERP_SCHEDULEENTRY AS entry ON entry.SCHESEQ = sche.SCHESEQ 
+			WHERE 1 =1
+			AND sche.SCHEGRPCD != 'PERIOD'
+			AND NOT EXISTS (
+							SELECT 1 FROM BASE.BS_MEETINGROOM_RESERVATION WHERE SCHEDULE_ID = sche.SCHESEQ 
+			)
+				
+			<isNotEmpty prepend="AND" property="selectDate">			
+				 SCHESYEAR = #selectYear# 	AND  SCHESMONTH = #selectMonth# AND  SCHESDAY = #selectDay# 
+			</isNotEmpty>
+			
+			<isNotEmpty prepend="AND" property="sabun">		
+				
+				(sche.PERSABUN=#sabun#  AND sche.DELFLAG = 'N' 
+					OR entry.PERSABUN = #sabun# AND entry.DELFLAG = 'N') 
+					  
+			</isNotEmpty>	  
+			 
+		/* meetingRoom.getScheduleList */
+	</select>
+	
+	<!-- 회의실예약 -->
+	<insert id="meetingRoom.intsertRsvMeetingRoom" parameterClass="HashMap">
+	
+		INSERT INTO BASE.BS_MEETINGROOM_RESERVATION (
+							
+							 MEETING_ROOM_ID
+							,START_DATE
+							,START_TIME
+							,END_DATE
+							,END_TIME
+							,SCHEDULE_ID
+							
+							,COMMENT
+							,RSV_USER_ID
+							
+							,CREATE_DATE
+							,CREATED_BY
+							,UPDATE_DATE
+							,UPDATED_BY
+							
+						)VALUES(
+							 #meetingRoomId#
+							,#startDate#
+							,#startTime# 
+							
+							,#endDate#
+							,#endTime#
+							,#scheduleId#
+							,#comment#
+							,(SELECT S_NB FROM SYNERGYMAIN.IB_STAFF WHERE SABUN = #rsvUserId#)
+							,now()
+							,#userSeq#
+							,now()
+							,#userSeq#
+							
+						
+						)
+		
+		<selectKey resultClass="int" type="post" keyProperty="rsvId">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		
+	</insert>
+	
+	<!-- 예약 내용 수정 -->
+	<update id="meetingRoom.updateRsvMeetingRoom">
+		
+			UPDATE BASE.BS_MEETINGROOM_RESERVATION 
+			
+				SET    START_DATE = #startDate#
+				      ,END_DATE   = #startDate# 
+				      ,START_TIME = #startTime#  
+				      ,END_TIME   = #endTime#    
+				      
+				  <isNotEmpty property="comment">		
+				      ,COMMENT 	  =#comment#
+				  </isNotEmpty>    
+				  
+				  <isNotEmpty property="scheduleId">
+				  	 ,SCHEDULE_ID =#scheduleId#
+				  </isNotEmpty> 
+				  
+				  <isNotEmpty property="rsvUserId">
+				  	 ,RSV_USER_ID =(SELECT S_NB FROM SYNERGYMAIN.IB_STAFF WHERE SABUN = #rsvUserId#)
+				  </isNotEmpty> 
+				      
+				     ,MEETING_ROOM_ID = #meetingRoomId#
+				     
+				    
+				   
+				     ,UPDATE_DATE = now()   
+				     ,UPDATED_BY  = #userSeq#  
+			   
+			 WHERE RSV_ID	= #rsvId#				
+	
+	</update>
+	
+	<!-- 예약 삭제 -->
+	<delete  id="meetingRoom.doDeleteRsvMeetingRoom">
+	
+		DELETE FROM BASE.BS_MEETINGROOM_RESERVATION 
+		
+		WHERE 1=1
+		
+		 <isNotEmpty property="rsvId">
+		  	AND RSV_ID	= #rsvId#
+		 </isNotEmpty> 
+		 
+		 <isNotEmpty property="scheduleId">
+		  	AND SCHEDULE_ID	= #scheduleId#
+		 </isNotEmpty> 
+		
+	
+	</delete>
+	
+
+</sqlMap>

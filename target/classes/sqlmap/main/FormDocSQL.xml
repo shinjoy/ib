@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="FormDoc">
+	<typeAlias alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias alias="formVO" type="ib.schedule.service.FormDocVO"/>
+	<typeAlias alias="spCmmVO" type="ib.schedule.service.SpCmmVO"/>
+	
+	<!-- 선택사원 정보 -->
+	<resultMap id="PerInfo" class="ib.schedule.service.FormDocVO">
+		<result property="PerSabun"				column="PerSabun"/>
+		<result property="PerNm"				column="PerNm"/>
+		<result property="PerAddr"				column="PerAddr"/>
+		<result property="PerDept"				column="PerDept"/>
+		<result property="DeptNm"				column="DeptNm"/>
+		<result property="PerPositionNm"		column="PerPositionNm"/>
+		<result property="PerJoinCom"			column="PerJoinCom"/>
+		<result property="PerOutCom"			column="PerOutCom"/>
+		<result property="ComPosition"			column="ComPosition"/>
+	</resultMap>
+
+	<!-- 증명서 정보 -->
+	<resultMap id="FormDocInfo" class="ib.schedule.service.FormDocVO">
+		<result property="FormDocReqSeq"		column="FormDocReqSeq"/>
+		<result property="ReqPerSabun"			column="ReqPerSabun"/>
+		<result property="TargetPerSabun"		column="TargetPerSabun"/>
+		<result property="FormDocCd"			column="FormDocCd"/>
+		<result property="FormDocNm"			column="FormDocNm"/>
+		<result property="Jumin1"				column="Jumin1"/>
+		<result property="Jumin2"				column="Jumin2"/>
+		<result property="JuminFlag"			column="JuminFlag"/>
+		<result property="ReqPerNm"				column="ReqPerNm"/>
+		<result property="TargetPerNm"			column="TargetPerNm"/>
+		<result property="ComPosition"			column="ComPosition"/>
+		<result property="NameStamp"			column="NameStamp"/>
+		<result property="PerAddr"				column="PerAddr"/>
+		<result property="PerDept"				column="PerDept"/>
+		<result property="DeptNm"				column="DeptNm"/>
+		<result property="PerPositionNm"		column="PerPositionNm"/>
+		<result property="Period"				column="Period"/>
+		<result property="FormDocEtc"			column="FormDocEtc"/>
+		<result property="FormDocUse"			column="FormDocUse"/>
+		<result property="FormDocReason"		column="FormDocReason"/>
+		<result property="ReqDate"				column="ReqDate"/>
+		<result property="ReqEndDate"			column="ReqEndDate"/>
+		<result property="ReqStatus"			column="ReqStatus"/>
+	</resultMap>
+	
+	<!-- 증명서 종류 받아오기 -->
+	<select id="formDAO.GetFormDocTypeList" resultClass="egovMap">
+		SELECT FormDocCd, FormDocNm FROM erp.ERP_FormDocType ORDER BY FormDocNm
+	</select>
+	
+	<!-- 사원리스트 받아오기 -->
+	<select id="formDAO.GetPerList" parameterClass="HashMap" resultClass="egovMap">
+		SELECT a.PerSabun
+			 , a.PerNm
+			 , a.PerPhone
+			 , a.ComPosition compositionCd
+			 , (select hq_name from base.bs_company_hq where hq_id = a.ComPosition) ComPosition
+			 , a.PerPosition
+			 , (SELECT positionNm FROM erp.erp_per_position where positionCd = a.PerPosition) PerPositionNm
+			 , a.PerDept
+			 , a.PerJoinCom
+			 , a.delFlag 		as delflag
+			 , b.division
+			 , a.PerSabun		as persabun
+			 , dept.deptNm		as deptNm
+			 , dept.deptSeq		as deptSeq
+			 
+		  FROM erp.ERP_Per			a
+		  JOIN synergymain.ib_staff	b on a.perSabun = b.sabun
+		  JOIN base.bs_division     c on b.division = c.div_code
+		  JOIN erp.erp_per_dept  dept on b.team = dept.deptSeq
+		 WHERE 1=1
+		   <!-- AND a.DelFlag = 'N'
+		   AND a.ViewFlag = 'Y' -->
+		   
+		   and b.srt_cd &gt; '00000'
+		   and b.srt_cd &lt;= '00200'
+		   
+		<isNotEmpty prepend="AND" property="division">
+			b.division = #division#	
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="divEnable">
+			exists (
+					select 1
+					  from base.bs_division
+					 where div_code = b.division
+					   and enable = #divEnable#
+				)
+		</isNotEmpty>   
+		<isNotEmpty prepend="AND" property="sabun"> <!-- 사번에 따른 검색 -->
+			a.perSabun in ($sabun$)
+		</isNotEmpty> 
+		<isNotEqual property="deptOrder" compareValue="Y">
+		  order by c.sort asc, a.PerNm
+		</isNotEqual>
+		<isEqual property="deptOrder" compareValue="Y">		  
+		  order by dept.deptOrder asc, b.stat_seq, a.PerNm asc
+		</isEqual>
+		
+		
+	</select>
+	
+	<!-- 퇴사자 포함 사원리스트 받아오기 -->
+	<select id="formDAO.GetAllPerList" resultClass="egovMap">
+		SELECT PerSabun, PerNm, PerPhone, PerJoinCom, PerOutCom FROM erp.ERP_Per WHERE DelFlag = 'N' AND ViewFlag = 'Y' OR PerOutCom IS NOT NULL OR PerOutCom != '' ORDER BY PerNm
+	</select>
+	
+	<!-- 선택 사원 정보 받아오기 -->
+	<select id="formDAO.GetPerInfo" resultMap="PerInfo">
+		SELECT PerSabun, PerNm, PerDept, IFNULL((SELECT DeptNm FROM erp.ERP_Per_Dept WHERE DeptSeq = PerDept), '') DeptNm,
+			PerPositionNm, ComPosition, PerJoinCom, PerOutCom, PerAddr FROM erp.ERP_Per WHERE PerSabun = #TargetPerSabun#
+	</select>
+	
+	<!-- 증명서 발급 요청 완료 -->
+	<insert id="formDAO.FormDocReqEnd">
+		INSERT INTO erp.ERP_FormDoc (ReqPerSabun, TargetPerSabun, FormDocCd, Jumin1, Jumin2, JuminFlag,
+			PerAddr, PerDept, PerPositionNm, Period, FormDocEtc, FormDocUse, FormDocReason, ComPosition, ReqDate, ReqStatus, DelFlag) VALUES
+		(#ReqPerSabun#, #TargetPerSabun#, #FormDocCd#, #Jumin1#, #Jumin2#, #JuminFlag#,
+			#PerAddr#, #PerDept#, #PerPositionNm#, #Period#, #FormDocEtc#, #FormDocUse#, #FormDocReason#, #ComPosition#, NOW(), 'New', 'N')
+	</insert>
+	
+	<!-- 증명서 발급내역 리스트 -->
+	<select id="formDAO.GetFormDocReqList" parameterClass="formVO" resultClass="egovMap">
+		SELECT FormDocReqSeq, ReqPerSabun, TargetPerSabun, a.FormDocCd, b.FormDocNm, Jumin1, Jumin2,
+			(SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = ReqPerSabun) ReqPerNm,
+			(SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = TargetPerSabun) TargetPerNm,
+			FormDocEtc, FormDocUse, FormDocReason,
+			DATE_FORMAT(ReqDate, '%Y-%m-%d') ReqDate, DATE_FORMAT(ReqEndDate, '%Y-%m-%d') ReqEndDate, ReqStatus,
+			(SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = ReqEndPerSabun) ReqEndPerNm, ReqEndPerSabun,
+			CASE ReqStatus WHEN 'New' THEN '신규' WHEN 'Return' THEN '반송' WHEN 'Ing' THEN '진행중' ELSE '완료' END ReqStatusNm,
+			CASE ReqStatus WHEN 'New' THEN 1 WHEN 'Return' THEN 2 WHEN 'Ing' THEN 3 ELSE 4 END ReqStatusOrder
+		FROM erp.ERP_FormDoc a, erp.ERP_FormDocType b
+		WHERE a.FormDocCd = b.FormDocCd AND a.DelFlag = 'N'
+		<isEqual property="EventType" compareValue="Alarm">AND ReqStatus != 'End'</isEqual>
+		<isNotEqual property="EventType" compareValue="Alarm">
+			<isEmpty property="SearchSDate">
+				<isNotEqual property="SelMonth" compareValue="13">AND DATE_FORMAT(ReqDate, '%Y-%m') = CONCAT(#SelYear#, '-', #SelMonth#)</isNotEqual>
+				<isEqual property="SelMonth" compareValue="13">AND DATE_FORMAT(ReqDate, '%Y') = CONCAT(#SelYear#)</isEqual>
+			</isEmpty>
+			<isNotEmpty property="SearchSDate">
+				AND DATE_FORMAT(ReqDate, '%Y-%m-%d') BETWEEN #SearchSDate# AND #SearchEDate#
+			</isNotEmpty>
+		</isNotEqual>
+		<isNotEmpty property="ReqPerSabun">AND ReqPerSabun = #ReqPerSabun#</isNotEmpty>
+		<isNotEmpty property="TargetPerSabun">AND TargetPerSabun = #TargetPerSabun#</isNotEmpty>
+		<isEmpty property="OrderKey">ORDER BY ReqStatusOrder, ReqDate</isEmpty>
+		<isNotEmpty property="OrderKey">ORDER BY $OrderKey$ $OrderType$</isNotEmpty>
+	</select>
+	
+	<!-- 증명서 정보 받아오기 -->
+	<select id="formDAO.GetFormDocInfo" resultMap="FormDocInfo">
+		SELECT FormDocReqSeq, ReqPerSabun, TargetPerSabun, a.FormDocCd, b.FormDocNm, Jumin1, CASE JuminFlag WHEN 'Y' THEN Jumin2 ELSE RPAD(SUBSTRING(Jumin2, 1, 1), 7, '*') END Jumin2, JuminFlag,
+			(SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = ReqPerSabun) ReqPerNm,
+			(SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = TargetPerSabun) TargetPerNm,
+			PerAddr, PerDept, IFNULL((SELECT DeptNm FROM erp.ERP_Per_Dept WHERE DeptSeq = PerDept), '') DeptNm,
+			PerPositionNm, Period, FormDocEtc, FormDocUse, FormDocReason, ComPosition,
+			CASE ComPosition
+				WHEN '시너지파트너스' THEN 'part_name.jpg' WHEN '시너지투자자문' THEN 'asset_name.jpg'
+				WHEN '시너지아이비투자' THEN 'ib_name.jpg' WHEN '시너지벤처투자' THEN 'ven_name.jpg'
+			END NameStamp,
+			DATE_FORMAT(ReqDate, '%Y-%m-%d') ReqDate, DATE_FORMAT(ReqStatus, '%Y-%m-%d') ReqEndDate, ReqStatus
+		FROM erp.ERP_FormDoc a, erp.ERP_FormDocType b
+		WHERE a.FormDocCd = b.FormDocCd AND FormDocReqSeq = #FormDocReqSeq#
+	</select>
+	
+	<!-- 증명서 상태 변경 완료 -->
+	<update id="formDAO.FormDocStatusEditEnd">
+		UPDATE erp.ERP_FormDoc SET ReqEndPerSabun = #RegPerSabun#, ReqStatus = #ReqStatus#, ReqEndDate = NOW(), Jumin1 = '', Jumin2 = '' WHERE FormDocReqSeq = #FormDocReqSeq#
+	</update>
+	
+	<!-- 증명서 요청 취소 완료 -->
+	<update id="formDAO.FormDocCancelEnd">
+		UPDATE erp.ERP_FormDoc SET DelFlag = 'Y', DelDate = NOW() WHERE FormDocReqSeq = #FormDocReqSeq#
+	</update>
+</sqlMap>

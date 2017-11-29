@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="stats">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	
+
+	<!-- 전체 유형 코드 정보 -->
+	<select id="stats.selectMezzTypeAll" parameterClass="HashMap" resultClass="HashMap">
+	
+		SELECT MENU_CD
+			  ,DTAIL_CD		AS cd
+			  ,CD_NM		AS nm
+			  ,USE_AT
+			  
+		  FROM IB_COMMON_CODE
+		 WHERE MENU_CD = '00005'
+		   AND (USE_AT IS NULL
+				OR USE_AT != 'N')
+		   AND DTAIL_CD NOT IN ('00011','00013','00014')
+		 ORDER BY CD_SORT2 ASC
+		 
+		/* stats.selectMezzTypeAll */
+	</select>
+
+
+	<!-- 유형 정보 -->
+	<select id="stats.selectPsMezzType" parameterClass="HashMap" resultClass="HashMap">
+	
+		SELECT A.PS_MEZZ_TYPE_ID				AS psMezzTypeId
+			  ,A.PS_MEZZ_ID						AS psMezzId
+			  ,A.PS_MEZZ_YEAR					AS psMezzYear
+			  ,A.PS_MEZZ_TYPE					AS psMezzType
+			  ,A.PS_IB_MATCH					AS psIbMatch
+
+			  ,B.CD_NM							AS psIbMatchNm
+			  ,B.CD_SORT2
+
+			  ,A.CREATED_BY												AS createdBy
+			  ,(SELECT USR_NM FROM IB_STAFF WHERE S_NB = A.CREATED_BY)	AS createNm
+			  ,DATE_FORMAT(A.CREATE_DATE, "%Y-%m-%d")					AS createDate
+			  ,A.UPDATED_BY												AS updatedBy
+			  ,(SELECT USR_NM FROM IB_STAFF WHERE S_NB = A.UPDATED_BY)	AS updateNm
+			  ,DATE_FORMAT(A.UPDATE_DATE, "%Y-%m-%d")					AS updateDate
+			  
+		  FROM BASE.BS_PS_MEZZ_TYPE	A
+		  LEFT JOIN IB_COMMON_CODE	B	ON A.PS_IB_MATCH = B.DTAIL_CD AND B.MENU_CD = '00005'
+		 WHERE 1=1
+		   AND A.PS_MEZZ_YEAR = #year#
+		 ORDER BY B.CD_SORT2 ASC
+		/* stats.selectPsMezzType */
+	</select>
+
+
+	<!-- 해당 연도 유형 삭제 -->
+	<delete id="stats.deleteMezzType" parameterClass="HashMap">
+		DELETE FROM BASE.BS_PS_MEZZ_TYPE
+		 WHERE PS_MEZZ_YEAR = #year#
+		 
+		/* stats.deleteMezzType */
+	</delete>
+	
+	
+	<!-- 해당 연도 유형 등록 -->
+	<insert id="stats.insertMezzType" parameterClass="HashMap">
+		INSERT INTO BASE.BS_PS_MEZZ_TYPE
+				(
+				    PS_MEZZ_ID
+			  	   ,PS_MEZZ_YEAR
+			 	   ,PS_MEZZ_TYPE
+			  	   ,PS_IB_MATCH
+				   
+				   ,CREATE_DATE
+				   ,CREATED_BY
+				   ,UPDATE_DATE
+				   ,UPDATED_BY
+		)VALUES(
+					#psMezzId#
+				   ,#psMezzYear#
+				   ,(SELECT VALUE FROM BASE.BS_CODE_LIST WHERE CODE_SET_ID = 81 AND MATCH_CODE = #psIbMatch# LIMIT 1)
+				   ,#psIbMatch#
+				  
+				   ,now()
+				   ,#userSeq#
+				   ,now()
+				   ,#userSeq#
+				  )				  
+		/* stats.insertMezzType */
+	</insert>
+
+
+	<!-- 직원 정보 -->
+	<select id="stats.selectPsMezzStaff" parameterClass="HashMap" resultClass="HashMap">
+	
+		SELECT A.PS_MEZZ_STAFF_ID				AS psMezzStaffId
+			  ,A.PS_MEZZ_ID						AS psMezzId
+			  ,A.PS_MEZZ_YEAR					AS psMezzYear
+			  ,A.PS_MEZZ_ROLE					AS psMezzRole
+			  ,A.PS_MEZZ_STAFF					AS psMezzStaff
+			  ,A.PS_MEZZ_RATE					AS psMezzRate
+			  ,A.PS_STAFF_INCOME				AS psStaffIncome
+			  ,A.PS_STAFF_GOAL					AS psStaffGoal
+			  
+			  ,B.USR_NM							AS name
+			  ,B.POSITION						AS positionCd
+			  ,(SELECT positionNm FROM erp.erp_per_position where positionCd = B.POSITION)	AS position
+			  
+			  ,IFNULL(C.totalAmount, 0)			AS psStaffAmt
+			  ,(CASE WHEN D.PS_MEZZ_STAFF IS NULL THEN 0 ELSE 1 END)	AS ibUser
+			  
+			  ,A.CREATED_BY												AS createdBy
+			  ,(SELECT USR_NM FROM IB_STAFF WHERE S_NB = A.CREATED_BY)	AS createNm
+			  ,DATE_FORMAT(A.CREATE_DATE, "%Y-%m-%d")					AS createDate
+			  ,A.UPDATED_BY												AS updatedBy
+			  ,(SELECT USR_NM FROM IB_STAFF WHERE S_NB = A.UPDATED_BY)	AS updateNm
+			  ,DATE_FORMAT(A.UPDATE_DATE, "%Y-%m-%d")					AS updateDate
+			  
+		  FROM BASE.BS_PS_MEZZ_STAFF	A
+		  LEFT JOIN IB_STAFF			B	ON A.PS_MEZZ_STAFF = B.S_NB
+		  LEFT JOIN (  
+						SELECT V.YEAR
+							  ,V.STAFF_NAME
+							  ,SUM(V.TOTAL_AMT) 	AS totalAmount			
+							  ,SUM(V.REAL_INVEST) 	AS directInvest			
+							  ,SUM(V.COUNT) 		AS count
+							   
+						  FROM BASE.EIS_REAL_INVEST_V	V		
+						LEFT JOIN IB_OFFER			OF ON V.OFFER_SNB = OF.S_NB
+						WHERE YEAR = #year#
+						AND OF.MIDDLE_OFFER_CD IN ('00001', '00002')
+						AND OF.CATEGORY_CD IN (SELECT PS_IB_MATCH
+												 FROM BASE.BS_PS_MEZZ_TYPE
+												WHERE PS_MEZZ_YEAR = #year#)
+						GROUP BY STAFF_NAME
+		    
+					) C	ON C.STAFF_NAME = B.USR_NM
+		  LEFT JOIN (SELECT PS_MEZZ_STAFF
+		  			   FROM BASE.BS_PS_MEZZ_STAFF
+		  			  WHERE PS_MEZZ_YEAR = #year# AND PS_MEZZ_ROLE = 'IB' AND DELETE_FLAG = 'N') D ON D.PS_MEZZ_STAFF = A.PS_MEZZ_STAFF
+			
+		 WHERE 1=1
+		   AND A.PS_MEZZ_YEAR = #year#
+		   AND A.PS_MEZZ_ROLE = #role#
+		   AND A.DELETE_FLAG = 'N'
+	
+		 ORDER BY B.STAT_SEQ ASC
+		/* stats.selectPsMezzStaff */
+	</select>
+	
+
+	<!-- 메자닌 성과 설정 정보 -->
+	<select id="stats.selectPsMezzConfigInfo" parameterClass="HashMap" resultClass="HashMap">
+	
+		SELECT A.PS_MEZZ_ID						AS psMezzId
+			  ,A.PS_MEZZ_YEAR					AS psMezzYear
+			  ,A.PS_MEZZ_BEP					AS psMezzBep
+			  ,A.PS_MEZZ_PR_AMT					AS psMezzPrAmt
+			  ,A.PS_MEZZ_U_BEP					AS psMezzUBep
+			  ,A.PS_MEZZ_M_BEP					AS psMezzMBep
+			  ,A.PS_MEZZ_H_BEP					AS psMezzHBep
+			  ,A.PS_MEZZ_PS_RATE				AS psMezzPsRate
+			  ,A.PS_MEZZ_PI_RATE				AS psMezzPiRate
+			  ,A.PS_ANA_NUM						AS psAnaNum
+			  ,A.PS_ANA_DNM						AS psAnaDnm
+			  ,A.PS_ANA_SRC_AMT					AS psAnaSrcAmt
+			  ,A.PS_ANA_SRC_RATE				AS psAnaSrcRate
+			                           
+			  ,A.CREATED_BY												AS createdBy
+			  ,(SELECT USR_NM FROM IB_STAFF WHERE S_NB = A.CREATED_BY)	AS createNm
+			  ,DATE_FORMAT(A.CREATE_DATE, "%Y-%m-%d")					AS createDate
+			  ,A.UPDATED_BY												AS updatedBy
+			  ,(SELECT USR_NM FROM IB_STAFF WHERE S_NB = A.UPDATED_BY)	AS updateNm
+			  ,DATE_FORMAT(A.UPDATE_DATE, "%Y-%m-%d")					AS updateDate
+			  
+		  FROM BASE.BS_PS_MEZZ_SET	A
+		 WHERE 1=1
+		   AND A.PS_MEZZ_YEAR = #year#
+		   
+		<isNotEmpty prepend="AND" property="psMezzId">
+			A.PS_MEZZ_ID = #psMezzId#
+		</isNotEmpty>
+
+		 ORDER BY A.PS_MEZZ_ID DESC
+		 LIMIT 1
+		
+		/* stats.selectPsMezzConfigInfo */
+	</select>
+
+
+	<!-- 메자닌 성과 설정정보 저장 -->
+	<insert id="stats.mergePsConfigInfo" parameterClass="HashMap">
+		INSERT INTO BASE.BS_PS_MEZZ_SET
+				(
+				<isNotEmpty prepend="" property="psMezzId">
+					PS_MEZZ_ID,
+				</isNotEmpty>				
+				    PS_MEZZ_YEAR
+				   ,PS_MEZZ_BEP
+				   ,PS_MEZZ_PR_AMT
+				   ,PS_MEZZ_U_BEP
+				   ,PS_MEZZ_M_BEP
+				   ,PS_MEZZ_H_BEP
+				   ,PS_MEZZ_PS_RATE
+				   ,PS_MEZZ_PI_RATE
+				   ,PS_ANA_NUM
+				   ,PS_ANA_DNM
+				   ,PS_ANA_SRC_AMT
+				   ,PS_ANA_SRC_RATE
+				   
+				   ,CREATE_DATE
+				   ,CREATED_BY
+				   ,UPDATE_DATE
+				   ,UPDATED_BY
+		)VALUES(
+				<isNotEmpty prepend="" property="psMezzId">
+					#psMezzId#,
+				</isNotEmpty>
+					#year#
+				   ,#bep#
+				   ,#prAmt#
+				   ,#uBep#
+				   ,#mBep#
+				   ,#hBep#
+				   ,#psRate#
+				   ,#piRate#
+				   ,#anaNum#
+				   ,#anaDnm#
+				   ,#anaSrcAmt#
+				   ,#anaSrcRate#
+				  
+				   ,now()
+				   ,#userSeq#
+				   ,now()
+				   ,#userSeq#
+				  )
+				  
+		  ON DUPLICATE KEY UPDATE
+		  			PS_MEZZ_YEAR	= #year#
+				   ,PS_MEZZ_BEP		= #bep#
+				   ,PS_MEZZ_PR_AMT	= #prAmt#
+				   ,PS_MEZZ_U_BEP	= #uBep#
+				   ,PS_MEZZ_M_BEP	= #mBep#
+				   ,PS_MEZZ_H_BEP	= #hBep#
+				   ,PS_MEZZ_PS_RATE	= #psRate#
+				   ,PS_MEZZ_PI_RATE	= #piRate#
+				   ,PS_ANA_NUM		= #anaNum#
+				   ,PS_ANA_DNM		= #anaDnm#
+				   ,PS_ANA_SRC_AMT	= #anaSrcAmt#
+				   ,PS_ANA_SRC_RATE	= #anaSrcRate#
+				               
+				  , UPDATE_DATE		= now()
+				  , UPDATED_BY		= #userSeq#
+
+		/* stats.mergePsConfigInfo */
+	</insert>
+
+
+	<!-- 직원 정보 저장 -->
+	<update id="stats.updatePsStaffInfo" parameterClass="Map">
+		UPDATE BASE.BS_PS_MEZZ_STAFF
+		   SET	
+		   
+			<isEqual prepend="" property="psMezzRole" compareValue="IB">
+				PS_STAFF_INCOME	= #psStaffIncome#
+			   ,PS_STAFF_GOAL	= #psStaffGoal#
+			</isEqual>
+			
+			<isEqual prepend="" property="psMezzRole" compareValue="ANAL">
+				PS_MEZZ_RATE	= #psMezzRate#
+			</isEqual>
+						               
+			   ,UPDATE_DATE		= now()
+			   ,UPDATED_BY		= #userSeq#
+			   
+		 WHERE PS_MEZZ_STAFF_ID = #psMezzStaffId#
+
+		/* stats.updatePsStaffInfo */
+	</update>
+
+
+	<!-- 대상자 정보 삭제(정보 저장 전 일괄삭제 처리) -->
+	<update id="stats.deleteMezzStaff" parameterClass="HashMap">
+		UPDATE BASE.BS_PS_MEZZ_STAFF
+		   SET  		
+		  			DELETE_FLAG = 'Y'
+		  		  , DELETED_BY 	= #userSeq#
+		  		  , DELETE_DATE = now()	
+
+				  , UPDATE_DATE	= now()
+				  , UPDATED_BY	= #userSeq#
+				  
+		 WHERE PS_MEZZ_YEAR = #year#
+		   AND PS_MEZZ_ROLE = #role#
+
+		/* stats.deleteMezzStaff */
+	</update>
+
+
+	<!-- 대상자 정보 저장 -->
+	<insert id="stats.mergeMezzStaff" parameterClass="HashMap">
+		INSERT INTO BASE.BS_PS_MEZZ_STAFF
+				(
+				<isNotEmpty prepend="" property="psMezzId">
+					PS_MEZZ_ID,
+				</isNotEmpty>				
+				    PS_MEZZ_YEAR
+				   ,PS_MEZZ_ROLE
+				   ,PS_MEZZ_STAFF
+				   				   
+				   ,CREATE_DATE
+				   ,CREATED_BY
+				   ,UPDATE_DATE
+				   ,UPDATED_BY
+		)VALUES(
+				<isNotEmpty prepend="" property="psMezzId">
+					#psMezzId#,
+				</isNotEmpty>
+					#psMezzYear#				   
+				   ,#psMezzRole#
+				   ,#psMezzStaff#
+				  
+				   ,now()
+				   ,#userSeq#
+				   ,now()
+				   ,#userSeq#
+				  )
+				  
+		  ON DUPLICATE KEY UPDATE
+		  		
+		  			DELETE_FLAG = 'N'
+		  		  , DELETED_BY = NULL
+		  		  , DELETE_DATE = NULL	
+
+				  , UPDATE_DATE		= now()
+				  , UPDATED_BY		= #userSeq#
+
+		/* stats.mergeMezzStaff */
+	</insert>
+
+
+
+
+	<!-- 개인 별 실적
+	<select id="stats.selectPrivateInvestAmount" parameterClass="HashMap" resultClass="HashMap">
+	
+		SELECT V.YEAR					AS year
+			  ,V.STAFF_NAME				AS staffName
+			  ,SUM(V.TOTAL_AMT)			AS totalAmount
+			  ,SUM(V.REAL_INVEST)		AS directInvest
+			  ,SUM(V.COUNT)				AS count
+		   
+		  FROM BASE.EIS_REAL_INVEST_V	V
+		  LEFT JOIN IB_OFFER			OF ON V.OFFER_SNB = OF.S_NB
+		 WHERE YEAR = #year#
+		   AND OF.MIDDLE_OFFER_CD IN ('00001', '00002')
+		   AND OF.CATEGORY_CD IN (SELECT PS_IB_MATCH
+									FROM BASE.BS_PS_MEZZ_TYPE
+								   WHERE PS_MEZZ_YEAR = #year#)		   
+		 GROUP BY STAFF_NAME
+		
+		/* stats.selectPrivateInvestAmount */
+	</select> -->
+
+
+	
+
+
+</sqlMap>

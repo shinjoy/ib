@@ -1,0 +1,131 @@
+@charset "utf-8";
+
+/*-------------------------------------------------
+Subpage Style Sheet
+Author : plani_hojeong Jin
+Create date : 2013. 09. 04.
+-------------------------------------------------*/
+
+/* common */
+/*간격*/
+.mgr02rem { margin-right:0.25rem; }
+.mgr03rem { margin-right:0.313rem; }
+.mgr05rem { margin-right:0.5rem; }
+.mgr07rem { margin-right:0.7rem; }
+.mgr1rem { margin-right:1rem; }
+.mgr2rem { margin-right:2rem; }
+.mgr3rem { margin-right:3rem; }
+.mgr4rem { margin-right:4rem; }
+.mgr5rem { margin-right:5rem; }
+.mgr6rem { margin-right:6rem; }
+
+.mgl02rem { margin-left:0.25rem; }
+.mgl03rem { margin-left:0.313rem; }
+.mgl05rem { margin-left:0.5rem; }
+.mgl07rem { margin-left:0.7rem; }
+.mgl1rem { margin-left:1rem; }
+.mgl2rem { margin-left:2rem; }
+.mgl3rem { margin-left:3rem; }
+.mgl4rem { margin-left:4rem; }
+.mgl5rem { margin-left:5rem; }
+.mgl6rem { margin-left:6rem; }
+
+.mgb03rem { margin-bottom:0.3rem; }
+.mgb05rem { margin-bottom:0.5rem; }
+.mgb06rem { margin-bottom:0.6rem; }
+.mgb1rem {  margin-bottom:1rem; }
+.mgb2rem {  margin-bottom:2rem; }
+
+.mgt03rem { margin-top:0.3rem; }
+.mgt05rem { margin-top:0.5rem; }
+.mgt08rem { margin-top:0.8rem; }
+.mgt1rem {  margin-top:1rem; }
+.mgt2rem {  margin-top:2rem; }
+
+.nocondata { height:6em; font-size:1.2rem; text-align:center; verticle-align:middle; }
+.relative { position:relative; }
+.valign, .valign span, .valign button, .valign label, .valign input, .valign select, .valign em, .valign p  { vertical-align:middle; }
+
+.mark_St { background:#ffe400; color:#202020!important; padding:0.08rem 0.2rem; mix-blend-mode: multiply; margin-left:-0.2rem; }
+
+/*인풋*/
+.input_basic_mini {border: #c3c3c3 solid 1px;font-size: 0.750rem;box-sizing:border-box;height: 1.375rem;vertical-align:middle;padding: 0.125rem 0.25rem;border-radius:0rem;width: 50%;}
+.input_basic { border:#c1c1c1 solid 1px; font-size:0.875rem; box-sizing:border-box; height:1.875rem; vertical-align:middle; padding:0.25rem 0.25rem; border-radius:0rem; }
+.select_basic { border:#c1c1c1 solid 1px; font-size:0.875rem; box-sizing:border-box; height:1.875rem; vertical-align:middle; padding:0.25rem 0.25rem; border-radius:0rem; }
+.select_basic option { }
+.textarea_basic { border:#c1c1c1 solid 1px; font-size:0.875rem; box-sizing:border-box; padding:0.25rem 0.25rem; height:6.25rem; border-radius:0.25rem; line-height:1.4; }
+.textarea_basic2 { border:#c1c1c1 solid 1px; font-size:0.875rem; box-sizing:border-box; padding:0.25rem 0.25rem; height:14.25rem; border-radius:0.25rem; line-height:1.4; }
+.select_custom  { background: url(../images_m/common/arrow.png) no-repeat right; width:100px; border:1px solid #427dcf;  -webkit-appearance: none;   border-radius: 30px;  padding :0.1rem 1rem 0.0rem 0.7rem; font-size:0.95rem; color:#427dcf; }
+.input_basic.disableInput {width: 12.375rem;}
+.select_basic.w_r_full.disableInput {width: 12.375rem;}
+
+.w100pro { width:100%; }
+.w50pro { width:50%; }
+.wdate { width:8rem; }
+.wtime { width:6rem; }
+.wselwork { width:14.5rem; }
+.w_setday { width:20%; }
+.wpeople { width:5.5rem; }
+.w_stime { width:4.25rem; }
+.w_mroom { width:5rem; }
+.w_r_full { width:9.5rem; }
+.w_r_half { width:4rem; }
+.w_full { width:12.388rem; }
+.w_half { width:5.938rem; }
+.bgimport { background:#f6f6f6; }
+.bgimport:focus { background:#f1f1f1; }
+
+.itemlist, .itemlist span, .itemlist button { vertical-align:middle; }
+.itemlist label { margin-left:1em; vertical-align:middle; }
+.itemlist label:first-child { margin-left:0px; }
+.itemlist input { margin-right:0.3em; vertical-align:middle; }
+
+.itemlist2, .itemlist2 span, .itemlist2 button {vertical-align:middle;}
+.itemlist2 label {margin-right: 0.5rem;line-height: 1.8;vertical-align:middle;word-break: keep-all;display: inline-block;}
+.itemlist2 input {margin-right: 0.125rem;vertical-align:middle;}
+
+
+/*폰트*/
+.fontB { color:#242424; }
+.fontRed { color:#ff6240; }
+.fontGray { color:#898989; }
+.fontBlue { color:#4073b9!important; }
+
+.f11 { font-size:0.75rem; }
+.f11_5 { font-size:0.813rem; }
+.f11_5 em { font-size:0.75rem; }
+.f12 { font-size:0.875rem; }
+
+.special_f_st { color:#09C; font-family:Verdana, Geneva, sans-serif; font-size:10px; }
+.special_f_st2 { font-family:Tahoma, Geneva, sans-serif; font-size:0.75rem; letter-spacing:0.8px; }
+.f_subscript { color:#797979; font-size:0.75rem; }
+.spe_color_st { color:#4b74b0; font-size:0.75rem; }
+.spe_color_st2 { color:#4b74b0; font-size:0.75rem; font-weight:bold; font-family:Tahoma, Geneva, sans-serif; }
+.spe_color_st3 { color:#484e5b; font-size:0.875rem; }
+.spe_color_st3 em { color:#bfbec1; font-size:0.75rem; margin-left:5px; }
+.spe_color_st4 { color:#597ac4; font-size:0.75rem; letter-spacing:-0.5px; }
+.spe_color_st5 { color:#223d63; font-size:0.875rem; letter-spacing:-0.5px; margin:0 3px; }
+.spe_color_st6 { color:#e8702e; font-size:0.75rem; letter-spacing:-0.5px; }
+.spe_color_st7 { color:#e8702e; font-size:0.875rem; letter-spacing:-0.5px; }
+
+.font_n_read { color:#e8702e; font-size:0.875rem; }
+.font_all_read { color:#898989; font-size:0.875rem; }
+
+/*리스트*/
+.list_st_dot { }
+.list_st_dot li { background:url(../images_m/work/bu_dot_notice.png) no-repeat left 0.3rem; background-size:0.3rem; padding-left:0.7rem; padding-bottom:0.4rem; line-height:1; font-size:0.875rem; }
+
+.list_st_bluedot { }
+.list_st_bluedot li { background:url(../images_m/work/bu_dot_file.png) no-repeat left 0.3rem; background-size:0.3rem; padding-left:0.7rem; padding-bottom:0.4rem; line-height:1; font-size:0.875rem; }
+
+
+/*버튼*/
+/*팝업버튼*/
+.btn_popZone { border-top:#dadada solid 1px; margin-top:1rem; padding-top:1rem; text-align:center; }
+.btn_popZone a { border-radius:2px; color:#fff; padding:0.6rem 0.7rem; line-height:1; font-size:0.875rem; vertical-align:middle; margin-left:1rem; display:inline-block; min-width:3rem;  }
+.btn_popZone a:first-child { margin-left:0px; }
+
+.btn_blueblack { background:#59647a; }
+.btn_blueblack2 { background:#33577b; }
+.btn_witheline { border:#bdc3d1 solid 1px; color:#232c3f!important; }
+.btn_grayline { background:#efefef; border:#bfbfbf solid 1px; color:#232c3f!important;  }

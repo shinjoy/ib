@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="personnel">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="bsnsPlanVO" type="ib.bsnsPlan.service.BsnsPlanVO"/>
+
+
+	<select id="bsnsPlanDAO.selectBsnsPlanList" parameterClass="bsnsPlanVO" resultClass="bsnsPlanVO">
+		<![CDATA[
+		 SELECT
+		 	   S_NB          as sNb
+			,  TM_DT         as tmDt
+			,  DETAIL_DIV_CD as detailDivCd
+			,  BSNS_LIST     as bsnsList
+			,  BSNS_DTAIL    as bsnsDtail
+			,  GOAL          as goal
+			,  GOAL_MONTH    as goalM
+			,  GOAL_HALF_YEAR as goalHY
+			,  SCHEDULE      as achedule
+			,  MON_1         as mon1
+			,  MON_2         as mon2
+			,  MON_3         as mon3
+			,  MON_4         as mon4
+			,  MON_5         as mon5
+			,  MON_6         as mon6
+			,  NOTE          as note
+			,  RG_ID         as rgId
+			,  MONTH(TM_DT)  as choice_month
+			FROM
+				IB_BSNS_PLAN
+		   WHERE 1=1
+		]]>
+        <isNotEmpty prepend="AND" property="rgId">
+			<![CDATA[	RG_ID = #rgId#		]]>
+		</isNotEmpty>
+        <isNotEmpty prepend="AND" property="choice_year">
+			<![CDATA[	TM_DT between CONCAT (#choice_year#, '01', '01') and CONCAT (#choice_year#, '12', '31235959') 		]]>
+		</isNotEmpty>
+
+		<![CDATA[
+		ORDER BY TM_DT
+		]]>
+
+	</select>
+	
+
+	<insert id="bsnsPlanDAO.insertBsnsPlan">
+		<![CDATA[
+			INSERT INTO IB_BSNS_PLAN 
+				  ( TM_DT
+				  , DETAIL_DIV_CD
+				  , BSNS_LIST
+				  , BSNS_DTAIL
+				  , GOAL
+				  , GOAL_MONTH
+				  , GOAL_HALF_YEAR
+				  , SCHEDULE
+				  , MON_1
+				  , MON_2
+				  , MON_3
+				  , MON_4
+				  , MON_5
+				  , MON_6
+				  , NOTE
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( CONCAT(#choice_year#,'0',#choice_month#,#choice_day#)
+				  , #detailDivCd#
+				  , #bsnsList#
+				  , #bsnsDtail#
+				  , #goal#
+				  , #goalM#
+				  , #goalHY#
+				  , #schedule#
+				  , #mon1#
+				  , #mon2#
+				  , #mon3#
+				  , #mon4#
+				  , #mon5#
+				  , #mon6#
+				  , #note#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+	</insert>
+ 
+	<update id="bsnsPlanDAO.updateBsnsPlan">
+		<![CDATA[
+			UPDATE IB_BSNS_PLAN 
+			SET 
+				  TM_DT        =  CONCAT(#choice_year#,'0',#choice_month#,#choice_day#)
+				, DETAIL_DIV_CD=  #detailDivCd#
+				, BSNS_LIST    =  #bsnsList#
+				, BSNS_DTAIL   =  #bsnsDtail#
+				, GOAL         =  #goal#
+				, GOAL_MONTH   =  #goalM#
+				, GOAL_HALF_YEAR  =  #goalHY#
+				, SCHEDULE     =  #schedule#
+				, MON_1        =  #mon1#
+				, MON_2        =  #mon2#
+				, MON_3        =  #mon3#
+				, MON_4        =  #mon4#
+				, MON_5        =  #mon5#
+				, MON_6        =  #mon6#
+				]]><isNotEmpty property="note"><![CDATA[
+				, NOTE         =  #note#
+				]]></isNotEmpty><![CDATA[
+				, UP_DT        =  now()
+				, UP_ID        =  #rgId#
+			WHERE S_NB         =  #sNb#
+		]]>
+	</update>
+	
+ 
+	<update id="bsnsPlanDAO.updateBsnsPlanNote">
+		<![CDATA[
+			UPDATE IB_BSNS_PLAN 
+			SET 
+				  NOTE         =  #note#
+				, UP_DT        =  now()
+				, UP_ID        =  #rgId#
+			WHERE S_NB         =  #sNb#
+		]]>
+	</update>
+	
+	
+
+	
+	<delete id="bsnsPlanDAO.deleteBsnsPlan">
+		<![CDATA[
+			DELETE FROM IB_BSNS_PLAN 
+			WHERE S_NB         =  #sNb#
+		]]>
+	</delete>
+
+ 
+	<update id="bsnsPlanDAO.updateBusinessPlanTmdt">
+		<![CDATA[
+			UPDATE IB_BSNS_PLAN 
+			SET 
+				  TM_DT        =  #tmDt#
+				, UP_DT        =  now()
+				, UP_ID        =  #rgId#
+			WHERE S_NB         =  #sNb#
+		]]>
+	</update>
+	
+</sqlMap>

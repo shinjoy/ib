@@ -1,0 +1,1166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="company">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="workVO" type="ib.work.service.WorkVO"/>
+	<typeAlias  alias="companyVO" type="ib.company.service.CompanyVO"/>
+	<typeAlias  alias="staffVO" type="ib.login.service.StaffVO"/>
+
+	<resultMap id="WorkMapDetail" class="ib.company.service.CompanyVO">
+		<result property="sNb"    	column="S_NB"    	columnIndex="1"/>
+	</resultMap>
+
+<!-- 회사 left -->
+	<select id="companyDAO.selectCompanyList" parameterClass="companyVO" resultClass="egovMap">
+			SELECT
+				  cpn.S_NB             AS  sNb
+			<isEmpty property="cpnNm">
+				, CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END     AS  aCpnId
+			</isEmpty>
+			<isNotEmpty property="cpnNm">
+				<![CDATA[
+				, REPLACE(CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END
+				, #cpnNm#
+				, CONCAT('<font color=blue>',#cpnNm#,'</font>'))           AS  aCpnId
+				]]>
+			</isNotEmpty>
+				, cpn.CPN_ID           AS  cpnId
+			<isEmpty property="cpnNm">
+				, cpn.CPN_NM           AS  cpnNm
+			</isEmpty>
+			<isNotEmpty property="cpnNm">
+				<![CDATA[
+				, REPLACE(cpn.CPN_NM, #cpnNm#,CONCAT('<font color=blue>',#cpnNm#,'</font>'))            AS  cpnNm
+				]]>
+			</isNotEmpty>
+				, cpn.CEO_ID           AS  ceoId
+				, (CASE WHEN (cpn.CPN_ID LIKE 'A%' OR cpn.A_CPN_ID LIKE 'A%') THEN 'Y' ELSE 'N' END)	AS listed
+				
+			FROM IB_COMPANY cpn
+			<isEqual property="recordCountPerPage" compareValue="0">
+				JOIN IB_CUSTOMER AS	cst	
+			</isEqual>
+			
+			WHERE 1=1
+		
+			<isNotEmpty prepend="AND" property="sNb">
+				cpn.S_NB = #sNb# 
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="cpnNm">
+				CONCAT('%',REPLACE(cpn.CPN_NM,' ',''),'%') LIKE CONCAT('%',REPLACE(#cpnNm#,' ',''),'%') 
+				OR (CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END) LIKE CONCAT('%',replace(#cpnNm#,' ',''),'%') 		
+				
+			</isNotEmpty>
+			<isEqual prepend="AND" property="recordCountPerPage" compareValue="0">
+				cpn.CPN_ID = cst.CPN_ID
+				GROUP BY cpn.CPN_ID  	
+			</isEqual>
+			
+			ORDER BY REPLACE(CPN_NM,'(주)','') ASC
+			<isNotEqual property="recordCountPerPage" compareValue="0">
+				LIMIT #firstIndex#, #recordCountPerPage#
+			</isNotEqual>
+	</select>
+
+	<select id="companyDAO.selectDefaultCompanyList" parameterClass="companyVO" resultClass="companyVO">
+			SELECT
+				  cpn.S_NB             AS  sNb
+				, CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END           AS  aCpnId
+				, cpn.CPN_ID           AS  cpnId
+				, cpn.CPN_NM           AS  cpnNm
+				, cpn.CEO_ID           AS  ceoId
+			
+			FROM IB_COMPANY cpn
+			<isEqual property="recordCountPerPage" compareValue="0">
+				JOIN IB_CUSTOMER cst
+			</isEqual>
+		
+			WHERE 1=1
+		
+			<isNotEmpty prepend="AND" property="sNb">
+				cpn.S_NB = #sNb# 
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="cpnNm">
+				cpn.CPN_NM LIKE CONCAT('%',#cpnNm#,'%') OR (CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END) LIKE CONCAT('%',#cpnNm#,'%') 	
+			</isNotEmpty>
+			<isEqual prepend="AND" property="recordCountPerPage" compareValue="0">
+				cpn.CPN_ID = cst.CPN_ID
+				GROUP BY cpn.CPN_ID 
+			</isEqual>
+			
+			ORDER BY REPLACE(CPN_NM,'(주)','') ASC
+			<isNotEqual property="recordCountPerPage" compareValue="0">
+				LIMIT #firstIndex#, #recordCountPerPage#
+			</isNotEqual>
+	</select>
+
+	<select id="personDAO.selectCompanyListCnt" parameterClass="companyVO" resultClass="java.lang.Integer">
+		
+			SELECT
+				  COUNT(1)
+			FROM IB_COMPANY
+			WHERE 1=1
+		
+			<isNotEmpty prepend="AND" property="cpnNm">
+				CPN_NM LIKE CONCAT('%',#cpnNm#,'%') OR (CASE WHEN (A_CPN_ID IS NULL OR A_CPN_ID = '') THEN CPN_ID ELSE A_CPN_ID END) LIKE CONCAT('%',#cpnNm#,'%') 
+			</isNotEmpty>
+	</select>
+<!-- 회사 left -->
+
+<!-- 회사 main -->
+	<select id="companyDAO.selectMainCompanyList" parameterClass="companyVO" resultClass="companyVO">
+		<![CDATA[
+			SELECT
+				  A.S_NB             	AS  sNb
+				, A.CPN_ID          	AS  cpnId
+				, CASE WHEN (A.A_CPN_ID IS NULL OR A.A_CPN_ID = '') THEN A.CPN_ID ELSE A.A_CPN_ID END   AS  aCpnId
+				, A.CPN_NM          	AS  cpnNm
+				, A.CEO_ID           	AS  ceoId
+				, A.EXPLORING         	AS  exploring
+				, A.CATEGORY_BUSINESS 	AS  categoryBusiness
+				, A.MAJOR_PRODUCT 		AS  majorProduct
+				, A.OPINION           	AS  opinion
+				, DATE(A.UP_DT)         AS  upDt
+				, st.USR_NM           	AS  rgNm
+				, (SELECT CST_NM FROM IB_CUSTOMER WHERE IB_CUSTOMER.S_NB = ceoId) AS cstNm
+				
+				, (CASE WHEN MC.ceo IS NULL THEN MC2.ceo ELSE MC.ceo END)						AS ceo
+				, (CASE WHEN MC.addr IS NULL THEN MC2.addr ELSE MC.addr END)					AS addr
+				, (CASE WHEN MC.maxholder IS NULL THEN MC2.maxholder ELSE MC.maxholder END)		AS maxHolder
+				, (CASE WHEN MC.tel IS NULL THEN MC2.tel ELSE MC.tel END)						AS tel
+				, (CASE WHEN MC.irtel IS NULL THEN MC2.irtel ELSE MC.irtel END)					AS irTel
+				, (CASE WHEN MC.maxhavestockrate IS NULL THEN MC2.maxhavestockrate ELSE MC.maxhavestockrate END)	AS maxStockRate
+				, (CASE WHEN MC.accountmonth IS NULL THEN MC2.accountmonth ELSE MC.accountmonth END)				AS accountMonth
+				, (CASE WHEN MC.founddate IS NULL THEN MC2.founddate ELSE MC.founddate END)		AS foundDate
+				, (CASE WHEN MC.publicdate IS NULL THEN MC2.publicdate ELSE MC.publicdate END)	AS publicDate
+				, (CASE WHEN MC.pricedate IS NULL THEN MC2.pricedate ELSE MC.pricedate END)		AS priceDate
+				, (CASE WHEN MC.unitprice IS NULL THEN MC2.unitprice ELSE MC.unitprice END)		AS unitPrice
+				, (CASE WHEN MC.stockvalue IS NULL THEN MC2.stockvalue ELSE MC.stockvalue END)	AS stockValue
+				, (CASE WHEN MC.ownstock IS NULL THEN MC2.ownstock ELSE MC.ownstock END)		AS ownStock
+				, (CASE WHEN MC.facevalue IS NULL THEN MC2.facevalue ELSE MC.facevalue END)		AS faceValue
+				, (CASE WHEN MC.money IS NULL THEN MC2.money ELSE MC.money END)					AS money
+				
+				, subIsf.usr_nm			AS usrNm
+				, ichg.s_nb				AS snb1st
+				
+			FROM IB_COMPANY 		AS	A
+			LEFT JOIN IB_EXPLORING 	AS	B 	ON B.CPN_ID = A.CPN_ID
+			LEFT JOIN IB_STAFF 		AS	ST 	ON ST.USR_ID = A.UP_ID
+			LEFT JOIN (
+						SELECT ComCd, ComNm, BusiType, CEO, Addr, MaxHolder, IFNULL(Tel, '-') Tel, IFNULL(IRTel, '-') IRTel,
+								MaxHaveStockRate, AccountMonth, DATE_FORMAT(FoundDate, '%Y-%m-%d') FoundDate, DATE_FORMAT(PublicDate, '%Y-%m-%d') PublicDate,
+								PriceDate, FORMAT(UnitPrice, 0) UnitPrice, FORMAT(StockValue, 0) StockValue, FORMAT(OwnStock, 0) OwnStock,
+								FORMAT(FaceValue, 0) FaceValue, FORMAT((UnitPrice * OwnStock) / 100000000, 0) AS Money
+						  FROM COMPANYINFO j
+						  LEFT OUTER JOIN CS_CATE_PRICE k ON j.ComCd = k.CateCd 
+						  								 AND k.DelFlag = 'N'
+						  								 AND k.PriceDate = (SELECT MAX(PriceDate) FROM CS_CATE_PRICE WHERE CateCd = (SELECT MIN(CATECD) FROM CS_CATE WHERE CATETYPE = '1' AND SUBCATECD = '2'))
+						 WHERE j.DELFLAG = 'N'
+						   AND j.COMCD = (SELECT CPN_ID FROM IB_COMPANY WHERE S_NB = #sNb#)
+						
+					) MC ON MC.comcd = A.CPN_ID
+		
+			LEFT JOIN (
+					SELECT ComCd, ComNm, BusiType, CEO, Addr, MaxHolder, IFNULL(Tel, '-') Tel, IFNULL(IRTel, '-') IRTel,
+							MaxHaveStockRate, AccountMonth, DATE_FORMAT(FoundDate, '%Y-%m-%d') FoundDate, DATE_FORMAT(PublicDate, '%Y-%m-%d') PublicDate,
+							PriceDate, FORMAT(UnitPrice, 0) UnitPrice, FORMAT(StockValue, 0) StockValue, FORMAT(OwnStock, 0) OwnStock,
+							FORMAT(FaceValue, 0) FaceValue, FORMAT((UnitPrice * OwnStock) / 100000000, 0) AS Money
+					  FROM COMPANYINFO j 
+					  LEFT OUTER JOIN CS_CATE_PRICE k ON j.ComCd = k.CateCd 
+					  							  	 AND k.DelFlag = 'N'
+					  								 AND k.PriceDate = (SELECT MAX(PRICEDATE) FROM CS_CATE_PRICE WHERE CATECD = (SELECT MIN(CATECD) FROM CS_CATE WHERE CATETYPE = '1' AND SUBCATECD = '2'))
+					 WHERE j.DelFlag = 'N'
+					   AND j.ComCd = (SELECT A_CPN_ID FROM IB_COMPANY WHERE S_NB = #sNb#)
+						
+					) MC2 ON MC2.comcd = A.A_CPN_ID
+		
+			LEFT JOIN (SELECT s_nb, up_id, target_snb FROM IB_INCHARGE WHERE CATEGORY = '1') ichg ON ichg.target_snb = a.s_nb
+			LEFT JOIN IB_STAFF subIsf ON subIsf.usr_id = ichg.up_id
+			
+			WHERE 1=1
+		]]>
+			<isNotEmpty prepend="AND" property="sNb">
+				<![CDATA[	A.S_NB = #sNb# 		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="sNb">
+				<![CDATA[	A.S_NB = 0 		]]>
+			</isEmpty>
+			limit 1
+	</select>
+	
+	<select id="companyDAO.selectMainCompanyList2" parameterClass="companyVO" resultClass="companyVO">
+		<![CDATA[
+			SELECT
+				  A.S_NB             	AS  sNb
+				, A.CPN_ID           	AS  cpnId
+				, A.CPN_NM           	AS  cpnNm
+				, A.CEO_ID           	AS  ceoId
+				, A.EXPLORING         	AS  exploring
+				, A.CATEGORY_BUSINESS 	AS  categoryBusiness
+				, A.MAJOR_PRODUCT 		AS  majorProduct
+				, A.OPINION           	AS  opinion
+				, DATE(A.UP_DT)         AS  upDt
+				, st.USR_NM           	AS  rgNm
+				, (SELECT CST_NM FROM IB_CUSTOMER WHERE IB_CUSTOMER.S_NB = ceoId) AS cstNm
+				, MC.ceo				AS  ceo
+				, MC.addr				AS  addr
+				, MC.maxholder			AS  maxHolder
+				, MC.tel				AS  tel
+				, MC.irtel				AS  irTel
+				, MC.maxhavestockrate	AS  maxStockRate
+				, MC.accountmonth		AS  accountMonth
+				, MC.founddate			AS  foundDate
+				, MC.publicdate			AS  publicDate
+				, MC.pricedate			AS  priceDate
+				, MC.unitprice			AS  unitPrice
+				, MC.stockvalue			AS  stockValue
+				, MC.ownstock			AS  ownStock
+				, MC.facevalue			AS  faceValue
+				, MC.money				AS  money
+				
+			FROM IB_COMPANY 		AS A
+			LEFT JOIN IB_EXPLORING  AS B 	ON B.CPN_ID = A.CPN_ID
+			LEFT JOIN IB_STAFF 		AS ST 	ON ST.USR_ID = A.UP_ID
+			LEFT JOIN (
+						SELECT ComCd, ComNm, BusiType, CEO, Addr, MaxHolder, IFNULL(Tel, '-') Tel, IFNULL(IRTel, '-') IRTel,
+								MaxHaveStockRate, AccountMonth, DATE_FORMAT(FoundDate, '%Y-%m-%d') FoundDate, DATE_FORMAT(PublicDate, '%Y-%m-%d') PublicDate,
+								PriceDate, FORMAT(UnitPrice, 0) UnitPrice, FORMAT(StockValue, 0) StockValue, FORMAT(OwnStock, 0) OwnStock,
+								FORMAT(FaceValue, 0) FaceValue, FORMAT((UnitPrice * OwnStock) / 100000000, 0) AS Money
+						 FROM COMPANYINFO AS a 
+						 LEFT OUTER JOIN CS_CATE_PRICE AS b ON a.ComCd = b.CateCd
+						 
+						 WHERE 	a.DelFlag = 'N' AND b.DelFlag = 'N'
+							AND b.PriceDate = (SELECT MAX(PRICEDATE) FROM CS_CATE_PRICE WHERE CATECD = (SELECT MIN(CATECD) FROM CS_CATE WHERE CATETYPE = '1' AND SUBCATECD = '2'))
+					) MC ON MC.comcd = A.CPN_ID
+			WHERE 1=1
+		]]>
+			<isNotEmpty prepend="AND" property="cpnId">
+				<![CDATA[	A.CPN_ID = #cpnId# 		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="cpnId">
+				<![CDATA[	A.CPN_ID = 0 		]]>
+			</isEmpty>
+			
+			LIMIT 1
+	</select>
+
+	<select id="companyDAO.selectNoteList" parameterClass="companyVO" resultClass="egovMap">
+		<![CDATA[
+			SELECT
+				  S_NB                  AS  noteSNb
+				, CPN_S_NB              AS  cstSnb /* IB_CUSTOMER SNB */
+				, TITLE                 AS  title
+				, NOTE                  AS  note
+				, RG_NM                 AS  rgNm
+				, RG_DT                 AS  rgDt
+				
+			FROM IB_NOTE
+			WHERE 1=1
+		]]>
+			<isNotEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	CPN_S_NB = #sNb# /* IB_CUSTOMER SNB */		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	CPN_S_NB = -1		]]>
+			</isEmpty>
+	</select>
+
+	<select id="companyDAO.selectNoteList2" parameterClass="companyVO" resultClass="egovMap">
+		<![CDATA[
+			SELECT
+				  S_NB                  AS  noteSNb
+				, CST_S_NB              AS  cstSnb /* IB_CUSTOMER SNB */
+				, TITLE                 AS  title
+				, NOTE                  AS  note
+				, RG_NM                 AS  rgNm
+				, RG_DT                 AS  rgDt
+			
+			FROM IB_NOTE
+			WHERE 1=1
+		]]>
+			<isNotEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	CST_S_NB = #cstSnb# /* IB_CUSTOMER SNB */		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	CST_S_NB = -1		]]>
+			</isEmpty>
+	</select>
+
+	<select id="companyDAO.selectNetPointList" parameterClass="companyVO" resultClass="egovMap">
+		<![CDATA[
+		SELECT * FROM (
+			
+			SELECT
+				  A.S_NB                AS  sNb
+				, A.S_NB_2nd            AS  subSNb /* IB_CUSTOMER SLAVE  SNB 인맥 */
+				, B.S_NB 				AS  cstId
+				, B.CST_NM 				AS  cstNm
+				, B1.CST_NM 			AS  cstNm1
+				, B.CPN_ID 				AS  cpnId
+				, C.CPN_NM 				AS  cpnNm
+				, C.S_NB 				AS  cpnSNb
+				, B.POSITION 			AS  position
+				, D.USR_NM 				AS  rgNm
+				, D.USR_ID 				AS  rgId
+				, A.NOTE                AS  note
+				, A.LV_CD 				AS  lvCd
+			
+			FROM IB_NET_POINT A
+			
+			LEFT JOIN IB_CUSTOMER 	B 	ON B.S_NB = A.S_NB_2nd
+			LEFT JOIN IB_CUSTOMER 	B1 	ON B1.S_NB = A.S_NB_1st
+			LEFT JOIN IB_COMPANY 	C 	ON C.CPN_ID = B.CPN_ID
+			LEFT JOIN IB_STAFF 		D 	ON D.USR_ID = A.RG_ID
+			
+			WHERE 1=1
+			
+		]]>
+			<isNotEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	A.S_NB_1st = #cstSnb# /* 대표이사 SNB */		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="cstSnb">
+					A.S_NB_1st = 0	
+			</isEmpty>
+			
+			UNION
+			
+			
+		<![CDATA[
+		
+			SELECT
+				  A.S_NB                AS  sNb
+				, A.S_NB_1st            AS  subSNb /* IB_CUSTOMER MASTER SNB */
+				, B.S_NB 				AS  cstId
+				, B.CST_NM 				AS  cstNm
+				, B1.CST_NM 			AS  cstNm1
+				, B.CPN_ID 				AS  cpnId
+				, C.CPN_NM 				AS  cpnNm
+				, C.S_NB 				AS  cpnSNb
+				, B.POSITION 			AS  position
+				, D.USR_NM 				AS  rgNm
+				, D.USR_ID 				AS  rgId
+				, A.NOTE                AS  note
+				, A.LV_CD 				AS  lvCd
+				
+			FROM IB_NET_POINT 		A
+			
+			LEFT JOIN IB_CUSTOMER 	B 	ON B.S_NB = A.S_NB_1st
+			LEFT JOIN IB_CUSTOMER 	B1 	ON B1.S_NB = A.S_NB_2nd
+			LEFT JOIN IB_COMPANY 	C 	ON C.CPN_ID = B.CPN_ID
+			LEFT JOIN IB_STAFF 		D 	ON D.USR_ID = A.RG_ID
+			
+			WHERE 1=1
+		]]>
+			<isNotEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	A.S_NB_2nd = #cstSnb# /* 대표이사 SNB */		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	A.S_NB_2nd = 0		]]>
+			</isEmpty>
+			
+			UNION
+			
+		<![CDATA[
+		
+			SELECT
+			  ''
+			, ''
+			, cst_id 	AS cstId
+			, cst_nm 	AS cstNm
+			, ''
+			, ''
+			, cpn_nm 	AS cpnNm
+			, ''
+			, ''
+			, ''
+			, ''
+			, GROUP_CONCAT(meet_nm SEPARATOR ', ') AS note
+			, CASE WHEN COUNT(1) > 5 THEN CONCAT('0000',5) ELSE CONCAT('0000',count(1)) END  AS lvCd
+			
+			FROM IB_CUST_ATTEND_MEET_V v1
+			
+			WHERE  cst_id <> #cstSnb#
+			AND  EXISTS ( SELECT 'x'
+						  FROM IB_CUST_ATTEND_MEET_V v2
+						  WHERE v2.cst_id  = #cstSnb#
+						  AND   v2.meet_id = v1.meet_id)
+						  
+			GROUP BY cst_nm
+		) U
+		]]>
+
+			ORDER BY U.lvCd DESC, U.cstNm ASC
+			
+			<isNotEqual property="recordCountPerPage" compareValue="0">
+				LIMIT #firstIndex#, #recordCountPerPage#
+			</isNotEqual>
+	</select>
+
+	<select id="companyDAO.selectNetPointListCnt" parameterClass="companyVO" resultClass="java.lang.Integer">
+		SELECT
+			(SELECT
+				  COUNT(1)
+			FROM IB_NET_POINT A
+			
+			<dynamic prepend="WHERE">
+				<isNotEmpty prepend="AND" property="cstSnb">
+					<![CDATA[	A.S_NB_1st = #cstSnb#		]]>
+				</isNotEmpty>
+				<isEmpty prepend="AND" property="cstSnb">
+					<![CDATA[	A.S_NB_1st = 0		]]>
+				</isEmpty>
+			</dynamic>
+			)+(
+			SELECT
+				  COUNT(1)
+			FROM IB_NET_POINT A
+			<dynamic prepend="WHERE">
+				<isNotEmpty prepend="AND" property="cstSnb">
+					<![CDATA[	A.S_NB_2nd = #cstSnb#		]]>
+				</isNotEmpty>
+				<isEmpty prepend="AND" property="cstSnb">
+					<![CDATA[	A.S_NB_2nd = 0		]]>
+				</isEmpty>
+			</dynamic>
+			)+(<![CDATA[
+			SELECT
+					COUNT(1)
+			FROM (
+					SELECT 1 
+					FROM IB_CUST_ATTEND_MEET_V v1
+					WHERE  cst_id <> #cstSnb#
+					  AND  EXISTS ( SELECT 'x'
+								 	FROM ib_cust_attend_meet_v v2
+								 	WHERE v2.cst_id  = #cstSnb#
+								 	AND   v2.meet_id = v1.meet_id)
+					GROUP BY cpn_nm, cst_nm ) aa
+			]]>) cnt
+	</select>
+
+		
+	<select id="companyDAO.selectMaxCpnId" parameterClass="companyVO" resultClass="companyVO">
+		<![CDATA[
+			SELECT
+			    MAX(CPN_ID+0) AS cpnId
+			FROM
+			    IB_COMPANY
+			WHERE
+			    LENGTH(CPN_ID) <> 7;
+		]]>
+	</select>
+	
+	<!-- 상장, 비상장 -->
+	<select id="companyDAO.selectMaxCpnIds" parameterClass="HashMap" resultClass="HashMap">
+		SELECT (SELECT MAX(CAST(CPN_ID AS UNSIGNED))+1 FROM IB_COMPANY WHERE CPN_ID NOT LIKE 'A%')								AS seq
+			  ,(SELECT CONCAT('AN', LPAD(SUBSTRING(MAX(A_CPN_ID),3,10)*1+1, 5, '0')) FROM IB_COMPANY WHERE A_CPN_ID LIKE 'AN%')	AS aSeq
+			  
+		  FROM DUAL
+		/* companyDAO.selectMaxCpnIds */
+	</select>
+	
+	
+	<!-- 상장, 비상장 -->
+	<select id="companyDAO.selectMaxCpnIdForUpload" parameterClass="HashMap" resultClass="HashMap">
+		SELECT (SELECT MAX(CAST(CPN_ID AS UNSIGNED))+1 FROM IB_COMPANY WHERE CPN_ID NOT LIKE 'A%')								AS seq
+			  			  
+		  FROM DUAL
+		/* companyDAO.selectMaxCpnIdForUpload */
+	</select>
+	
+
+	<insert id="companyDAO.insertCompany">
+		INSERT INTO IB_COMPANY
+				  (
+				    CPN_ID
+			<isEqual property="listedYn" compareValue="Y">
+				  , A_CPN_ID
+			</isEqual>
+				  , CPN_NM
+				  , CEO_ID
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+				  )
+		  VALUES (
+				    #seq#
+			<isEqual property="listedYn" compareValue="Y">
+				  , #aSeq#	
+			</isEqual>
+				  , #cpnNm#
+				  , #ceoId#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+	</insert>
+
+	<update id="companyDAO.updateCompany">
+		<![CDATA[
+			UPDATE IB_COMPANY
+			SET
+				  CEO_ID       =  #ceoId#
+				, UP_DT        =  now()
+				, UP_ID        =  #rgId#
+			WHERE CPN_ID       =  #cpnId#
+		]]>
+	</update>
+
+
+	<!-- 기존 회사 리스트 중에서 select 체크 (회사 일괄 업로드 프로세스) -->
+	<select id="companyDAO.selectCompanyForChk" parameterClass="HashMap" resultClass="HashMap">
+		SELECT CPN_ID		AS cpnId
+			  ,A_CPN_ID		AS aCpnId
+			  ,CPN_NM		AS cpnNm
+			  
+		  FROM IB_COMPANY
+		 WHERE 1=1
+		   AND A_CPN_ID = #aCpnId#
+		/* companyDAO.selectCompanyForChk */
+	</select>
+
+
+	<!-- 기존 회사 리스트 중에서 select 체크 (회사 일괄 업로드 프로세스) -->
+	<select id="companyDAO.selectCompanyForChk0000000000000" parameterClass="HashMap" resultClass="HashMap">
+		SELECT CPN_ID		AS cpnId
+			  ,A_CPN_ID		AS aCpnId
+			  ,CPN_NM		AS cpnNm
+			  
+		  FROM IB_COMPANY
+		 WHERE 1=1
+		<isNotEmpty property="cpnId">
+		   AND (CPN_ID = #cpnId# OR A_CPN_ID = #cpnId#)
+		</isNotEmpty>
+		<isNotEmpty property="cpnNm">
+		   AND CPN_NM = #cpnNm#
+		</isNotEmpty>
+		
+	</select>
+
+
+	<!-- 회사정보 일괄업로드 (CSV) -->
+	<update id="companyDAO.insertCompanyList">
+		<![CDATA[
+			INSERT INTO IB_COMPANY
+				  (
+				    CPN_ID											]]><![CDATA[
+				  , A_CPN_ID  										]]><![CDATA[
+				  , CPN_NM											]]><isNotEmpty property="market"><![CDATA[
+				  , MARKET                                          ]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , CEO_ID                                          ]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , CATEGORY_BUSINESS                               ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , MAJOR_PRODUCT                                   ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , LISTED_DT                                       ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , REGION                                          ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , CAPITALIZATION                                  ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , FLUCTUATION                                     ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , PBR                                             ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , PER                                             ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , SHARE                                           ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , STOCK                                           ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , DEBT_RATIO                                      ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , CB                                              ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , BW                                              ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , PUT                                             ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , EB                                              ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , CASHABLE                                        ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , IR                                              ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , ADDR                                            ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , ADDR_DETAIL                                     ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , QNA                                             ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , HOMEPAGE                                        ]]></isNotEmpty><![CDATA[
+				  , RG_DT
+				  , RG_ID
+				  , UP_DT
+				  , UP_ID
+		 ) VALUES (
+				    #cpnId#											]]><![CDATA[
+				  , #aCpnId# 										]]><![CDATA[
+				  , #cpnNm#											]]><isNotEmpty property="market"><![CDATA[
+				  , #market#                                        ]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , #ceoId#                                         ]]></isNotEmpty><isNotEmpty property="cpnListedCd"><![CDATA[
+				  , #cpnListedCd#                                   ]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , #categoryBusiness#                              ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , #majorProduct#                                  ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , case when #listedDt# = '' then null end         ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , #region#                                        ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , #capitalization#                                ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , #fluctuation#                                   ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , #pbr#                                           ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , #per#                                           ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , #share#                                         ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , #stock#                                         ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , #debtRatio#                                     ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , #cb#                                            ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , #bw#                                            ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , #put#                                           ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , #eb#                                            ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , #cashable#                                      ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , #ir#                                            ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , #addr#                                          ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , #addrDetail#                                    ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , #QnA#                                           ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , #homepage#                                      ]]></isNotEmpty><![CDATA[
+				  , now()
+				  , #rgId#
+				  , now()
+				  , #upId#
+				  )
+		  
+		]]>
+		/* companyDAO.insertCompanyList */
+	</update>
+
+	<!-- 회사정보 일괄업로드 (CSV) update -->
+	<update id="companyDAO.updateCompanyList">
+		<![CDATA[
+		UPDATE IB_COMPANY
+		   SET
+				    CPN_NM               =  #cpnNm#					]]><isNotEmpty property="market"><![CDATA[
+				  , MARKET               =  #market#				]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , CEO_ID               =  #ceoId#					]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , CATEGORY_BUSINESS    =  #categoryBusiness#      ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , MAJOR_PRODUCT        =  #majorProduct#          ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , LISTED_DT            =  #listedDt#              ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , REGION               =  #region#                ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , CAPITALIZATION       =  #capitalization#        ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , FLUCTUATION          =  #fluctuation#           ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , PBR                  =  #pbr#                   ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , PER                  =  #per#                   ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , SHARE                =  #share#                 ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , STOCK                =  #stock#                 ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , DEBT_RATIO           =  #debtRatio#             ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , CB                   =  #cb#                    ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , BW                   =  #bw#                    ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , PUT                  =  #put#                   ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , EB                   =  #eb#                    ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , CASHABLE             =  #cashable#              ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , IR                   =  #ir#                    ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , ADDR                 =  #addr#                  ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , ADDR_DETAIL          =  #addrDetail#            ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , QNA                  =  #QnA#                   ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , HOMEPAGE             =  #homepage#              ]]></isNotEmpty><![CDATA[
+				  , UP_DT                =  now()
+				  , UP_ID                =  #upId#
+		]]>
+		WHERE A_CPN_ID	=  #aCpnId#
+		/* companyDAO.updateCompanyList */
+	</update>
+
+	
+	<!-- 회사정보 일괄업로드 (CSV) -->
+	<insert id="companyDAO.saveCompanyList000000000000000">
+		<![CDATA[
+			INSERT INTO IB_COMPANY
+				  (
+				    CPN_ID											]]><isNotEmpty property="aCpnId"><![CDATA[
+				  , A_CPN_ID  										]]></isNotEmpty><![CDATA[
+				  , CPN_NM											]]><isNotEmpty property="market"><![CDATA[
+				  , MARKET                                          ]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , CEO_ID                                          ]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , CATEGORY_BUSINESS                               ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , MAJOR_PRODUCT                                   ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , LISTED_DT                                       ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , REGION                                          ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , CAPITALIZATION                                  ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , FLUCTUATION                                     ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , PBR                                             ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , PER                                             ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , SHARE                                           ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , STOCK                                           ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , DEBT_RATIO                                      ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , CB                                              ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , BW                                              ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , PUT                                             ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , EB                                              ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , CASHABLE                                        ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , IR                                              ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , ADDR                                            ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , ADDR_DETAIL                                     ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , QNA                                             ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , HOMEPAGE                                        ]]></isNotEmpty><![CDATA[
+				  , RG_DT
+				  , RG_ID
+				  , UP_DT
+				  , UP_ID
+		 ) VALUES (
+				    #cpnId#											]]><isNotEmpty property="aCpnId"><![CDATA[
+				  , #aCpnId# 										]]></isNotEmpty><![CDATA[
+				  , #cpnNm#											]]><isNotEmpty property="market"><![CDATA[
+				  , #market#                                        ]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , #ceoId#                                         ]]></isNotEmpty><isNotEmpty property="cpnListedCd"><![CDATA[
+				  , #cpnListedCd#                                   ]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , #categoryBusiness#                              ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , #majorProduct#                                  ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , case when #listedDt# = '' then null end         ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , #region#                                        ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , #capitalization#                                ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , #fluctuation#                                   ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , #pbr#                                           ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , #per#                                           ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , #share#                                         ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , #stock#                                         ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , #debtRatio#                                     ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , #cb#                                            ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , #bw#                                            ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , #put#                                           ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , #eb#                                            ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , #cashable#                                      ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , #ir#                                            ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , #addr#                                          ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , #addrDetail#                                    ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , #QnA#                                           ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , #homepage#                                      ]]></isNotEmpty><![CDATA[
+				  , now()
+				  , #rgId#
+				  , now()
+				  , #upId#
+				  )
+		  ON DUPLICATE KEY UPDATE
+				    A_CPN_ID             =  #cpnId#
+				  , CPN_NM               =  #cpnNm#					]]><isNotEmpty property="market"><![CDATA[
+				  , MARKET               =  #market#				]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , CEO_ID               =  #ceoId#					]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , CATEGORY_BUSINESS    =  #categoryBusiness#      ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , MAJOR_PRODUCT        =  #majorProduct#          ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , LISTED_DT            =  #listedDt#              ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , REGION               =  #region#                ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , CAPITALIZATION       =  #capitalization#        ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , FLUCTUATION          =  #fluctuation#           ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , PBR                  =  #pbr#                   ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , PER                  =  #per#                   ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , SHARE                =  #share#                 ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , STOCK                =  #stock#                 ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , DEBT_RATIO           =  #debtRatio#             ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , CB                   =  #cb#                    ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , BW                   =  #bw#                    ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , PUT                  =  #put#                   ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , EB                   =  #eb#                    ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , CASHABLE             =  #cashable#              ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , IR                   =  #ir#                    ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , ADDR                 =  #addr#                  ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , ADDR_DETAIL          =  #addrDetail#            ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , QNA                  =  #QnA#                   ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , HOMEPAGE             =  #homepage#              ]]></isNotEmpty><![CDATA[
+				  , UP_DT                =  now()
+				  , UP_ID                =  #upId#
+		]]>
+	</insert>
+
+
+	<insert id="companyDAO.updateCompanyExcel">
+		<![CDATA[
+			INSERT INTO IB_COMPANY
+				  (
+				    CPN_ID
+				  , CPN_NM											]]><isNotEmpty property="market"><![CDATA[
+				  , MARKET                                          ]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , CEO_ID                                          ]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , CATEGORY_BUSINESS                               ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , MAJOR_PRODUCT                                   ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , LISTED_DT                                       ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , REGION                                          ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , CAPITALIZATION                                  ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , FLUCTUATION                                     ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , PBR                                             ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , PER                                             ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , SHARE                                           ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , STOCK                                           ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , DEBT_RATIO                                      ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , CB                                              ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , BW                                              ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , PUT                                             ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , EB                                              ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , CASHABLE                                        ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , IR                                              ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , ADDR                                            ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , ADDR_DETAIL                                     ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , QNA                                             ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , HOMEPAGE                                        ]]></isNotEmpty><![CDATA[
+				  , RG_DT
+				  , RG_ID
+				  , UP_DT
+				  , UP_ID
+		 ) VALUES (
+				    #cpnId#
+				  , #cpnNm#											]]><isNotEmpty property="market"><![CDATA[
+				  , #market#                                        ]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , #ceoId#                                         ]]></isNotEmpty><isNotEmpty property="cpnListedCd"><![CDATA[
+				  , #cpnListedCd#                                   ]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , #categoryBusiness#                              ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , #majorProduct#                                  ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , case when #listedDt# = '' then null end         ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , #region#                                        ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , #capitalization#                                ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , #fluctuation#                                   ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , #pbr#                                           ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , #per#                                           ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , #share#                                         ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , #stock#                                         ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , #debtRatio#                                     ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , #cb#                                            ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , #bw#                                            ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , #put#                                           ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , #eb#                                            ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , #cashable#                                      ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , #ir#                                            ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , #addr#                                          ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , #addrDetail#                                    ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , #QnA#                                           ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , #homepage#                                      ]]></isNotEmpty><![CDATA[
+				  , now()
+				  , #rgId#
+				  , now()
+				  , #upId#
+				  )
+		  ON DUPLICATE KEY UPDATE
+				    A_CPN_ID             =  #cpnId#
+				  , CPN_NM               =  #cpnNm#					]]><isNotEmpty property="market"><![CDATA[
+				  , MARKET               =  #market#				]]></isNotEmpty><isNotEmpty property="ceoId"><![CDATA[
+				  , CEO_ID               =  #ceoId#					]]></isNotEmpty><isNotEmpty property="categoryBusiness"><![CDATA[
+				  , CATEGORY_BUSINESS    =  #categoryBusiness#      ]]></isNotEmpty><isNotEmpty property="majorProduct"><![CDATA[
+				  , MAJOR_PRODUCT        =  #majorProduct#          ]]></isNotEmpty><isNotEmpty property="listedDt"><![CDATA[
+				  , LISTED_DT            =  #listedDt#              ]]></isNotEmpty><isNotEmpty property="region"><![CDATA[
+				  , REGION               =  #region#                ]]></isNotEmpty><isNotEmpty property="capitalization"><![CDATA[
+				  , CAPITALIZATION       =  #capitalization#        ]]></isNotEmpty><isNotEmpty property="fluctuation"><![CDATA[
+				  , FLUCTUATION          =  #fluctuation#           ]]></isNotEmpty><isNotEmpty property="pbr"><![CDATA[
+				  , PBR                  =  #pbr#                   ]]></isNotEmpty><isNotEmpty property="per"><![CDATA[
+				  , PER                  =  #per#                   ]]></isNotEmpty><isNotEmpty property="share"><![CDATA[
+				  , SHARE                =  #share#                 ]]></isNotEmpty><isNotEmpty property="stock"><![CDATA[
+				  , STOCK                =  #stock#                 ]]></isNotEmpty><isNotEmpty property="debtRatio"><![CDATA[
+				  , DEBT_RATIO           =  #debtRatio#             ]]></isNotEmpty><isNotEmpty property="cb"><![CDATA[
+				  , CB                   =  #cb#                    ]]></isNotEmpty><isNotEmpty property="bw"><![CDATA[
+				  , BW                   =  #bw#                    ]]></isNotEmpty><isNotEmpty property="put"><![CDATA[
+				  , PUT                  =  #put#                   ]]></isNotEmpty><isNotEmpty property="eb"><![CDATA[
+				  , EB                   =  #eb#                    ]]></isNotEmpty><isNotEmpty property="cashable"><![CDATA[
+				  , CASHABLE             =  #cashable#              ]]></isNotEmpty><isNotEmpty property="ir"><![CDATA[
+				  , IR                   =  #ir#                    ]]></isNotEmpty><isNotEmpty property="addr"><![CDATA[
+				  , ADDR                 =  #addr#                  ]]></isNotEmpty><isNotEmpty property="addrDetail"><![CDATA[
+				  , ADDR_DETAIL          =  #addrDetail#            ]]></isNotEmpty><isNotEmpty property="QnA"><![CDATA[
+				  , QNA                  =  #QnA#                   ]]></isNotEmpty><isNotEmpty property="homepage"><![CDATA[
+				  , HOMEPAGE             =  #homepage#              ]]></isNotEmpty><![CDATA[
+				  , UP_DT                =  now()
+				  , UP_ID                =  #upId#
+		]]>
+	</insert>
+
+	<update id="companyDAO.updateCEO">
+		<![CDATA[
+			UPDATE (SELECT CPN_ID, S_NB FROM IB_CUSTOMER WHERE POSITION LIKE '대표이사%' AND CPN_ID IS NOT NULL) B
+			INNER JOIN IB_COMPANY A
+			ON A.CPN_ID = B.CPN_ID
+			SET A.CEO_ID = B.S_NB
+		]]>
+	</update>
+
+
+	<select id="companyDAO.selectEmployeeList" parameterClass="workVO" resultClass="workVO">
+		<![CDATA[
+			SELECT
+				 A.S_NB				AS  sNb
+			    ,A.POSITION			AS  position
+			    ,A.CPN_ID			AS  cpnId
+			    ,A.CST_NM			AS  cstNm
+			FROM
+			    IB_CUSTOMER A
+			WHERE
+			    A.CPN_ID = #cpnId#
+		    ORDER BY CASE WHEN POSITION='대표이사' THEN 1 ELSE 2 END, CST_NM
+		]]>
+	</select>
+
+	<select id="companyDAO.selectCpnCstInfoList" parameterClass="companyVO" resultClass="companyVO">
+		<![CDATA[
+
+			SELECT
+				  A.S_NB                AS  sNb
+				, A.S_NB_1st            AS  subSNb /* IB_COMPANY  SNB 인맥 */
+				, B.CST_NM 				AS  cstNm
+				, B.POSITION 			AS  position
+				, B.S_NB 				AS  cstSnb
+				, C.USR_NM 				AS  rgNm
+				, D.CPN_NM 				AS  cpnNm
+				, A.NOTE 				AS  note
+				, A.LV_CD 				AS  lvCd
+				
+			FROM IB_CST_DEAL_INFO A
+			
+			LEFT JOIN IB_CUSTOMER B ON B.S_NB = A.S_NB_1st
+			LEFT JOIN IB_COMPANY D ON D.CPN_ID = B.CPN_ID
+			LEFT JOIN IB_STAFF C ON C.USR_ID = A.RG_ID
+			
+			WHERE 1=1
+		]]>
+			<isNotEmpty prepend="AND" property="sNb">
+				<![CDATA[	A.S_NB_2nd = #sNb# 		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="sNb">
+				<![CDATA[	A.S_NB_2nd = '0'		]]>
+			</isEmpty>
+			
+			GROUP BY A.S_NB_2nd
+			ORDER BY A.LV_CD DESC
+	</select>
+
+	<select id="companyDAO.selectCpnNetList" parameterClass="workVO" resultClass="workVO">
+		<![CDATA[
+			SELECT
+					 b.cpn_nm			AS cpnNm
+					,c.cst_nm			AS cstNm
+					,c.cst_cpn			AS cstCpnNm
+					,a.note				AS note
+					,d.usr_nm			AS rgNm
+					,DATE(a.rg_dt)		AS rgDt
+					,b.s_nb				AS snb1st
+					,c.s_nb				AS snb2nd
+					
+			FROM IB_CST_DEAL_INFO 	a
+			
+			LEFT JOIN IB_COMPANY 	b ON b.s_nb = a.s_nb_2nd
+			LEFT JOIN (
+						SELECT 
+							  i1.s_nb   	AS s_nb
+				            , i1.cst_nm 	AS cst_nm
+				            , i2.cpn_nm 	AS cst_cpn
+				            
+				            FROM IB_CUSTOMER i1
+				            LEFT JOIN IB_COMPANY i2 ON i2.cpn_id = i1.cpn_id ) c ON c.s_nb = a.s_nb_1st
+				            
+			LEFT JOIN IB_STAFF d ON d.usr_id = a.rg_id
+			
+			WHERE A.NET_YN = 'Y'
+		]]>
+			ORDER BY a.rg_dt DESC LIMIT 20
+	</select>
+
+	<select id="personDAO.selectOpinionListCnt" parameterClass="workVO" resultClass="java.lang.Integer">
+		<![CDATA[
+			SELECT
+				  COUNT(1)
+			
+			FROM IB_RECOMMEND_OPINION A
+			LEFT JOIN IB_OFFER C ON A.OFFER_SNB = C.S_NB
+			
+			WHERE A.CATEGORY = '00001'
+		]]>
+			<isNotEmpty prepend="AND" property="cpnId">
+				<![CDATA[	C.CPN_ID = #cpnId#	]]>
+			</isNotEmpty>
+	</select>
+
+	<select id="companyDAO.selectCpnIdNewNold" parameterClass="workVO" resultClass="workVO">
+		SELECT
+				  CPN_ID 		AS cpnId
+				, A_CPN_ID 		AS aCpnId
+				
+		 FROM IB_COMPANY
+		 
+		 WHERE A_CPN_ID IS NOT NULL
+		  	AND A_CPN_ID 	!= ''
+		  	AND A_CPN_ID 	!= CPN_ID
+	</select>
+
+	<update id="companyDAO.updateCompanyCpnId">
+		UPDATE IB_COMPANY
+			
+		SET
+			CPN_ID = A_CPN_ID
+				   
+		WHERE A_CPN_ID IS NOT NULL
+			AND A_CPN_ID != ''
+			AND CPN_ID != A_CPN_ID
+	</update>
+
+	<insert id="companyDAO.insertIncharge">
+		
+		INSERT INTO IB_INCHARGE
+				  (
+				    TARGET_SNB
+				  , CATEGORY
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 	) VALUES (
+				    #tmpNum1#
+				  , #categoryCd#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+			)
+		
+	</insert>
+
+	<update id="companyDAO.updateIncharge">
+		
+			UPDATE IB_INCHARGE
+			SET
+				  TARGET_SNB    =  #tmpNum1#
+				, UP_DT        	=  now()
+				, UP_ID         =  #rgId#
+			WHERE S_NB       	=  #sNb#
+		
+	</update>
+
+	<select id="companyDAO.selectInvestmentList" parameterClass="java.util.HashMap" resultClass="java.util.HashMap">
+		<![CDATA[
+			SELECT
+					  vm.s_nb				AS sNb
+					, vm.invest_cpn_snb		AS cpnSnb
+					, vm.cpn_snb    		AS cpnSnb0
+					, vmCpn.cpn_nm  		AS cpnNm
+					, vm.cst_snb    		AS cstSnb0
+					, vmCst.cst_nm  		AS cstNm
+					, vm.category      		AS category
+					, cmm.cd_nm      		AS categoryNm
+					, vm.price      		AS price
+					, vm.comment    		AS comment
+					
+			FROM IB_INVESTMENT vm
+			
+			LEFT JOIN IB_COMPANY 		ivCpn ON ivCpn.s_nb = vm.invest_cpn_snb
+			LEFT JOIN IB_COMPANY 		vmCpn ON vmCpn.s_nb = vm.cpn_snb
+			LEFT JOIN IB_CUSTOMER 		vmCst ON vmCst.s_nb = vm.cst_snb
+			LEFT JOIN IB_COMMON_CODE 	cmm   ON cmm.menu_cd = '00005' AND cmm.dtail_cd = vm.category
+			
+		]]>
+		<dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="sNb">
+			<![CDATA[ vm.s_nb =  #sNb# ]]>
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="cpnSnb">
+			<![CDATA[ vm.invest_cpn_snb =  #cpnSnb# ]]>
+			</isNotEmpty>
+		</dynamic>
+		ORDER BY ivCpn.cpn_nm
+	</select>
+
+	<insert id="companyDAO.insertInvestmentList">
+	
+			INSERT INTO ib_investment
+				  (
+				    INVEST_CPN_SNB
+				  , CPN_SNB
+				  , CST_SNB
+				  , CATEGORY
+				  , PRICE
+				  , COMMENT
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #invest_cpn_snb#
+				  , #cpn_snb#
+				  , #cst_snb#
+				  , #category#
+				  , #price#
+				  , #comment#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+		
+	</insert>
+
+	<update id="companyDAO.updateInvestmentList">
+		
+			UPDATE IB_INVESTMENT
+			SET
+				  INVEST_CPN_SNB	=  #invest_cpn_snb#
+				, CPN_SNB   		=  #cpn_snb#
+				, CST_SNB   		=  #cst_snb#
+				, CATEGORY   		=  #category#
+				, PRICE   			=  #price#
+				, COMMENT   		=  #comment#
+				, UP_DT   			=  now()
+				, UP_ID   			=  #rgId#
+				
+			WHERE S_NB       =  #sNb#
+		
+	</update>
+
+	<delete id="companyDAO.deleteInvestmentList">
+		<![CDATA[
+			DELETE FROM IB_INVESTMENT
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+	
+	<!-- 투자사(경쟁사)리스트 20170804 ksm -->
+	<select id="companyDAO.selectInvestorCompanyList" parameterClass="companyVO" resultClass="egovMap">
+			SELECT
+				  cpn.S_NB             		AS  sNb
+			<isEmpty property="cpnNm">
+				, CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END     AS  aCpnId
+			</isEmpty>
+			<isNotEmpty property="cpnNm">
+				<![CDATA[
+				, REPLACE(CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END
+				, #cpnNm#
+				, CONCAT('<font color=blue>',#cpnNm#,'</font>'))           AS  aCpnId
+				]]>
+			</isNotEmpty>
+				, cpn.CPN_ID           		AS  cpnId
+			<isEmpty property="cpnNm">
+				, cpn.CPN_NM           		AS  cpnNm
+			</isEmpty>
+			<isNotEmpty property="cpnNm">
+				<![CDATA[
+				, REPLACE(cpn.CPN_NM, #cpnNm#,CONCAT('<font color=blue>',#cpnNm#,'</font>'))            AS  cpnNm
+				]]>
+			</isNotEmpty>
+				, cpn.CEO_ID           		AS ceoId
+				, (CASE WHEN (cpn.CPN_ID LIKE 'A%' OR cpn.A_CPN_ID LIKE 'A%') THEN 'Y' ELSE 'N' END)	AS listed
+				, manager.MANAGER_NM   		AS managerNm
+				, investor.INVESTOR_ID		AS investorId 		   
+			FROM IB_COMPANY cpn
+			<isEqual property="recordCountPerPage" compareValue="0">
+				JOIN IB_CUSTOMER 			AS cst
+			</isEqual>
+				JOIN BASE.BS_INVESTOR_COMPANY  						AS	investor ON cpn.CPN_ID = investor.CPN_ID
+				LEFT OUTER JOIN BASE.BS_INVESTOR_COMPANY_MANAGER  	AS	manager ON manager.INVESTOR_ID = investor.INVESTOR_ID	
+			
+			WHERE 1=1            
+			  AND investor.USE_YN = 'Y'
+
+			<isNotEmpty prepend="AND" property="sNb">
+				cpn.S_NB = #sNb# 
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="cpnNm">
+				CONCAT('%',REPLACE(cpn.CPN_NM,' ',''),'%') LIKE CONCAT('%',REPLACE(#cpnNm#,' ',''),'%') 
+				<!-- OR (CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END) LIKE CONCAT('%',replace(#cpnNm#,' ',''),'%')  -->						
+			</isNotEmpty>
+			<isEqual prepend="AND" property="recordCountPerPage" compareValue="0">
+				cpn.CPN_ID = cst.CPN_ID
+				GROUP BY cpn.CPN_ID  	
+			</isEqual>
+			
+			<!-- ORDER BY REPLACE(CPN_NM,'(주)','') ASC -->
+			ORDER BY investorId ASC
+			<isNotEqual property="recordCountPerPage" compareValue="0">
+				LIMIT #firstIndex#, #recordCountPerPage#
+			</isNotEqual>
+			
+		/* companyDAO.selectInvestorCompanyList */
+	</select>
+	
+	<select id="companyDAO.selectInvestorCompanyListCnt" parameterClass="companyVO" resultClass="java.lang.Integer">
+			SELECT COUNT(1)					
+			  FROM IB_COMPANY					AS 	cpn
+			  JOIN BASE.BS_INVESTOR_COMPANY  	AS	investor ON cpn.CPN_ID = investor.CPN_ID
+			 WHERE 1=1
+			<isNotEmpty prepend="AND" property="cpnNm">
+				cpn.CPN_NM LIKE CONCAT('%',#cpnNm#,'%') 
+				<!-- OR (CASE WHEN (cpn.A_CPN_ID IS NULL OR cpn.A_CPN_ID = '') THEN cpn.CPN_ID ELSE cpn.A_CPN_ID END) LIKE CONCAT('%',#cpnNm#,'%')  -->
+			</isNotEmpty>
+			
+		/* companyDAO.selectInvestorCompanyListCnt */
+	</select>
+	
+</sqlMap>

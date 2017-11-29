@@ -1,0 +1,2092 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="person">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="personVO" type="ib.person.service.PersonVO"/>
+	<typeAlias  alias="companyVO" type="ib.company.service.CompanyVO"/>
+	<typeAlias  alias="staffVO" type="ib.login.service.StaffVO"/>
+	<typeAlias  alias="excelVO" type="ib.basic.service.CpnExcelVO"/>
+
+<!-- PERSON left -->
+	<select id="personDAO.selectPersonList" parameterClass="personVO" resultClass="egovMap">
+			SELECT
+				  A.S_NB                      as  sNb
+				, A.CPN_ID                    as  cpnId
+				, B.S_NB                      as  cpnSnb
+			<isEmpty property="cstNm">
+				, B.CPN_NM                    as  cpnNm
+			</isEmpty>
+			<isNotEmpty property="cstNm"><![CDATA[
+				, replace(B.CPN_NM, #cstNm#,concat('<font color=blue>',#cstNm#,'</font>'))           as  cpnNm
+			]]></isNotEmpty>
+				, A.POSITION                  as  position
+			<isEmpty property="cstNm">
+				, A.CST_NM                    as  cstNm
+			</isEmpty>
+			<isNotEmpty property="cstNm"><![CDATA[
+				, replace(A.CST_NM, #cstNm#,concat('<font color=blue>',#cstNm#,'</font>'))           as  cstNm
+			]]></isNotEmpty>
+		
+		
+				<!-- , CASE WHEN A.CATEGORY_PERSON_CD = '00000' THEN '일반' WHEN A.CATEGORY_PERSON_CD = '00001' THEN '심사역' WHEN A.CATEGORY_PERSON_CD = '00002' THEN '운용인재' WHEN A.CATEGORY_PERSON_CD = '00003' THEN '심사역, 운용인재' END       as  categoryPSNm -->
+				, (select cd_nm from ib_common_code where menu_cd = '00013' and dtail_cd = A.CATEGORY_PERSON_CD )as  categoryPSNm
+				
+		<![CDATA[
+				, A.CATEGORY_PERSON_CD		  as  categoryPSCd
+			FROM IB_CUSTOMER A
+			LEFT JOIN IB_COMPANY B ON B.CPN_ID = A.CPN_ID
+			WHERE 1=1
+			  AND (
+					A.CST_NM LIKE CONCAT('%',#cstNm#,'%') 
+				 or A.CST_NM LIKE CONCAT('%',#cstNmKor#,'%')
+				 or B.CPN_NM LIKE CONCAT('%',#cstNm#,'%')
+				 or B.CPN_ID = #cstNm#
+				  )
+				  
+			  AND A.DELETE_FLAG = 'N'
+		]]>
+			<!--  or B.CPN_NM LIKE CONCAT('%',#cstNm#,'%')) -->
+			<isNotEmpty prepend="AND" property="sNb">
+				<![CDATA[	A.S_NB = #sNb# 		]]>
+			</isNotEmpty>
+
+			ORDER BY A.CST_NM ASC
+			<isNotEqual property="recordCountPerPage" compareValue="0">
+			limit #firstIndex#, #recordCountPerPage#
+			</isNotEqual>
+	</select>
+
+
+	<select id="personDAO.selectPersonListCnt" parameterClass="personVO" resultClass="java.lang.Integer">
+		<![CDATA[
+			SELECT
+					COUNT(1)
+			FROM IB_CUSTOMER A
+			LEFT JOIN IB_COMPANY B ON B.CPN_ID = A.CPN_ID
+			WHERE 1=1
+			  AND (
+					A.CST_NM LIKE CONCAT('%',#cstNm#,'%') 
+				 or A.CST_NM LIKE CONCAT('%',#cstNmKor#,'%')
+				 or B.CPN_NM LIKE CONCAT('%',#cstNm#,'%')
+				  )
+				  
+			  AND A.DELETE_FLAG = 'N'
+		]]>
+			<!--  or B.CPN_NM LIKE CONCAT('%',#cstNm#,'%')) -->
+	</select>
+<!-- PERSON left -->
+
+<!-- PERSON main -->
+	<select id="personDAO.selectMainPersonList" parameterClass="personVO" resultClass="personVO">
+		
+			SELECT
+				  A.S_NB                      as  sNb
+				, A.CST_NM                    as  cstNm
+				, A.CPN_ID                    as  cpnId
+				, B.CPN_NM                    as  cpnNm
+				, B.S_NB                      as  cpnSnb
+				, A.EMAIL                     as  email
+				, A.PHN_EXPOSURE              as  phnExposure
+				, A.PHN_1                     as  phn1
+				, A.PHN_2                     as  phn2
+				, A.PHN_3                     as  phn3
+				, A.POSITION                  as  position
+				, A.LV_CD                     as  lvCd
+				
+				, (select cd_nm from IB_COMMON_CODE where menu_cd = '00013' and dtail_cd = A.CATEGORY_PERSON_CD) as  categoryPSNm
+								
+				, A.CATEGORY_PERSON_CD 		  as  categoryPSCd
+				, (SELECT SABUN FROM IB_STAFF WHERE USR_ID = A.RG_ID)		as  RegPerSabun		<!-- #rgId# -->
+				, A.UP_ID						as upId
+				, A.RG_ID						as rgId
+				
+				, mgmt.usr_nm				as usrNm
+				, ''						as snb1st
+				 
+				, (SELECT STAFF_ID FROM BASE.BS_CUSTOMER_MANAGER WHERE CUSTOMER_ID = A.S_NB AND STATUS = 'Y')	AS managerId
+				
+			FROM IB_CUSTOMER A
+			LEFT JOIN IB_COMPANY B ON B.CPN_ID = A.CPN_ID
+			
+			LEFT JOIN (SELECT A.CUSTOMER_ID,
+							  GROUP_CONCAT((SELECT USR_NM FROM IB_STAFF WHERE S_NB = A.STAFF_ID) ORDER BY A.SEQ
+											SEPARATOR ' > ') AS USR_NM
+					    FROM BASE.BS_CUSTOMER_MANAGER A
+					    WHERE A.`STATUS` IN ('T', 'Y')					        
+					    GROUP BY A.CUSTOMER_ID)		MGMT ON MGMT.CUSTOMER_ID = A.S_NB
+								
+			WHERE 1=1
+			  AND A.DELETE_FLAG = 'N'
+		
+			<isNotEmpty prepend="AND" property="sNb">
+				<![CDATA[	A.S_NB = #sNb# 		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="sNb">
+				<![CDATA[	A.S_NB = 0 		]]>
+			</isEmpty>
+			
+		/* personDAO.selectMainPersonList */
+	</select>
+
+	<select id="personDAO.selectMainPersonList2" parameterClass="personVO" resultClass="personVO">
+		
+			SELECT
+				  A.S_NB                      as  sNb
+				, A.CST_NM                    as  cstNm
+				, A.CPN_ID                    as  cpnId
+				, (SELECT CPN_NM FROM IB_COMPANY WHERE IB_COMPANY.CPN_ID = A.CPN_ID)      as  cpnNm
+				, A.EMAIL                     as  email
+				, A.PHN_EXPOSURE              as  phnExposure
+				, A.PHN_1                     as  phn1
+				, A.PHN_2                     as  phn2
+				, A.PHN_3                     as  phn3
+				, A.POSITION                  as  position
+				, A.LV_CD                     as  lvCd
+				<!--, CASE WHEN CATEGORY_PERSON_CD = '00000' THEN '일반' WHEN CATEGORY_PERSON_CD = '00001' THEN '심사역' WHEN CATEGORY_PERSON_CD = '00002' THEN '운용인재' WHEN CATEGORY_PERSON_CD = '00003' THEN '심사역, 운용인재' END        as  categoryPSNm-->
+				, (select cd_nm from IB_COMMON_CODE where menu_cd = '00013' and dtail_cd = A.CATEGORY_PERSON_CD) as  categoryPSNm
+				, A.CATEGORY_PERSON_CD 		as  categoryPSCd
+				, A.UP_ID						as upId
+				, A.RG_ID						as rgId
+			FROM IB_CUSTOMER	A
+			WHERE 1=1
+			  AND A.DELETE_FLAG = 'N'
+		
+			<isNotEmpty prepend="AND" property="cstNm">
+				<![CDATA[	A.CST_NM = #cstNm# 		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="cstNm">
+				<![CDATA[	A.CST_NM = '0' 		]]>
+			</isEmpty>
+			ORDER BY A.RG_DT DESC
+	</select>
+
+	<insert id="personDAO.insertCustomer">
+		<![CDATA[
+			INSERT INTO IB_CUSTOMER
+				  (
+				    CST_NM
+				  , CPN_ID
+				  , POSITION
+				  , CATEGORY_PERSON_CD
+				  , PHN_1
+				  , PHN_2
+				  , PHN_3
+				  , EMAIL
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+				  , PHN_EXPOSURE
+		 ) VALUES (
+				    #cstNm#
+				  , #cpnId#
+				  , #position#
+				  , #categoryPSCd#
+				  , #phn1#
+				  , #phn2#
+				  , #phn3#
+				  , #email#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  , #phnExposure#
+				  )
+		]]>
+		<selectKey resultClass="String" type="post" keyProperty="cstId">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	<select id="personDAO.selectSearchDuplicateB4excelInsert" parameterClass="workVO" resultClass="java.lang.Integer">
+		select
+				count(1)
+		  from ib_customer cst
+	 left join ib_company cpn on cpn.cpn_id = cst.cpn_id
+		 where cst.cst_nm like concat('%',#cstNm#,'%')
+<isNotEmpty prepend="AND" property="cpnNm"> cpn.cpn_nm = #cpnNm# </isNotEmpty>
+	</select>
+
+	<insert id="personDAO.excelInsertCustomer">
+		<![CDATA[
+			INSERT INTO IB_CUSTOMER
+				  (
+				    CST_NM
+				  , CPN_ID
+				  , POSITION
+				  , PHN_1
+				  , PHN_2
+				  , EMAIL
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #cstNm#
+				  , (SELECT CPN_ID FROM IB_COMPANY WHERE CPN_NM = #cpnNm#)
+				  , #position#
+				  , #phn1#
+				  , #phn2#
+				  , #email#
+				  , #rgDt#
+				  , now()
+				  , #rgId#
+				  , 'excel'
+				  )
+		  ON DUPLICATE KEY UPDATE
+				    CST_NM    =  #cstNm#
+				  , CPN_ID    =  (SELECT CPN_ID FROM IB_COMPANY WHERE CPN_NM = #cpnNm#)
+				  , POSITION  =  #position#
+				  , PHN_1     =  #phn1#
+				  , PHN_2     =  #phn2#
+				  , EMAIL     =  #email#
+				  , RG_DT     =  #rgDt#
+				  , UP_DT     =  now()
+				  , RG_ID     =  #rgId#
+				  , UP_ID     =  'excel'
+		]]>
+	</insert>
+
+	<insert id="personDAO.insertNetworkCst">
+		
+			INSERT INTO IB_NET_POINT
+				  (
+				    S_NB_1st
+				  , S_NB_2nd
+				  
+			<isNotEmpty property="relDegree">
+				  , LV_CD
+			</isNotEmpty>
+				  
+				  , NOTE
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #sNb1st#
+				  , #sNb2nd#
+				  
+			<isNotEmpty property="relDegree">
+				  , #relDegree#
+			</isNotEmpty>
+				  
+				  , #note#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+		
+	</insert>
+
+	<insert id="personDAO.insertCstDealInfo">
+		<![CDATA[
+			INSERT INTO IB_CST_DEAL_INFO
+				  (
+				    S_NB_1st
+				  , S_NB_2nd
+				  , NET_YN
+				  , NOTE
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #sNb1st#
+				  , #sNb2nd#
+				  , #netYN#
+				  , #note#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+		]]>
+	</insert>
+
+	<insert id="personDAO.insertNote">
+		<![CDATA[
+			INSERT INTO IB_NOTE
+				  (
+				    CST_S_NB
+				  , TITLE
+				  , NOTE
+				  , RG_NM
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #cstSnb#
+				  , #title#
+				  , #note#
+				  , (SELECT USR_NM FROM IB_STAFF WHERE USR_ID = #rgId#)
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+		]]>
+	</insert>
+
+	<insert id="personDAO.excelInsertNote">
+		<![CDATA[
+			INSERT INTO IB_NOTE
+				  (
+				    CST_S_NB
+				  , TITLE
+				  , NOTE
+				  , RG_NM
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #cstSnb#
+				  , #title#
+				  , #note#
+				  , (SELECT USR_NM FROM IB_STAFF WHERE USR_ID = #rgId#)
+				  , #rgDt#
+				  , now()
+				  , #rgId#
+				  , 'exel'
+				  )
+		  ON DUPLICATE KEY UPDATE
+				    CST_S_NB  =  #cstSnb#
+				  , TITLE     =  #title#
+				  , NOTE      =  #note#
+				  , RG_NM     =  (SELECT USR_NM FROM IB_STAFF WHERE USR_ID = #rgId#)
+				  , RG_DT     =  #rgDt#
+				  , UP_DT     =  now()
+				  , RG_ID     =  #rgId#
+				  , UP_ID     =  'exel'
+		]]>
+	</insert>
+
+	<update id="personDAO.updateCustomer">
+		<![CDATA[
+			UPDATE IB_CUSTOMER
+			SET
+				  CST_NM     =  #cstNm#
+				, CPN_ID     =  #cpnId#
+				, POSITION   =  #position#
+				, CATEGORY_PERSON_CD   =  #categoryPSCd#
+				, PHN_1      =  #phn1#
+				, PHN_2      =  #phn2#
+				, PHN_3      =  #phn3#
+				, EMAIL      =  #email#
+				, UP_DT      =  now()
+				, UP_ID      =  #rgId#
+			WHERE S_NB       =  #sNb#
+		]]>
+	</update>
+	<update id="personDAO.updateCstPhn">
+		<![CDATA[
+			UPDATE IB_CUSTOMER
+			SET
+				  PHN_1      =  #phn1#
+				, PHN_EXPOSURE = #phnExposure#
+				, UP_DT      =  now()
+				, UP_ID      =  #rgId#
+			WHERE S_NB       =  #sNb#
+		]]>
+	</update>
+	<update id="person.updateCustomerType">
+		<![CDATA[
+			UPDATE IB_CUSTOMER
+			SET
+				  CATEGORY_PERSON_CD   =  #cstType#
+				, UP_DT      =  now()
+				, UP_ID      =  #rgId#
+			WHERE S_NB       =  #cstId#
+		]]>
+	</update>
+
+	<select id="personDAO.selectCheckStaff" parameterClass="staffVO" resultClass="staffVO">
+		<![CDATA[
+			SELECT
+				  A.USR_NM                  as usrNm
+				, A.USR_ID                  as usrId
+				, A.USR_PW                  as usrPw
+				, A.PERMISSION              as permission
+				, A.SRT_CD         			as srtCd
+			
+				, A.SABUN					as sabun
+				, A.s_nb					as staffSnb
+				, A.cus_id					as cusId
+				
+				, A.PHN_1					as phn1
+				, A.position				as positionCd
+				, (SELECT positionNm FROM erp.erp_per_position where positionCd = A.position) as position
+				, (select 'Y' from ib_common_code where menu_cd = '00023' and dtail_cd = a.s_nb) as analMaster
+				
+				, A.INFO_LEVEL				as infoLevel
+				, A.MNA_LEVEL				as mnaLevel
+				, A.REVIEW_LEVEL			as reviewLevel
+				, A.PRE_STAFF				as preStaff
+				, A.PRE_STAFF_CD			as preStaffCd
+				
+				, (select peremail from erp.erp_per where persabun = A.sabun)	as email
+							
+				, A.team					as deptId
+				, (SELECT deptNm FROM erp.ERP_PER_DEPT WHERE  A.team = deptSeq) as deptNm
+				, (SELECT manager FROM erp.ERP_PER_DEPT WHERE  A.team = deptSeq) as deptMngr
+				
+				, A.division  				as division
+				, (SELECT hq_name FROM base.BS_COMPANY_HQ WHERE A.office = hq_id) as hqName
+				, A.OFFICE					AS hqId
+				, IFNULL(B.car_work_yn, 'N') as carWorkYn
+				, IFNULL(B.MEZZ_L, 'N') 	as mezzL
+				, IFNULL(B.MEZZ_N, 'N') 	as mezzN
+				, A.EMAIL_ID				as emailId
+				, A.EMAIL_PASSWD			as emailPasswd
+				
+				, A.DEAL_SMS				as dealSms
+				
+			FROM IB_STAFF					A
+			LEFT JOIN BASE.BS_USER_PROFILE	B	 ON A.S_NB = B.USER_ID
+			
+			WHERE A.USR_PW = #usrPw#
+			  AND A.SRT_CD != '10000'
+		]]>
+		<isNotEmpty prepend="AND" property= "usrId">
+			<![CDATA[	A.USR_ID = #usrId#	]]>
+		</isNotEmpty>
+	</select>
+
+	<select id="personDAO.selectStaff" parameterClass="staffVO" resultClass="staffVO">
+			SELECT
+				  S_NB              			as sNb
+				, USR_NM            			as usrNm
+				, USR_ID            			as usrId
+				, USR_PW            			as usrPw
+				
+				, TEAM							as team
+				, staff.POSITION				as positionCd
+				, (SELECT positionNm FROM erp.erp_per_position where positionCd = staff.POSITION) as position
+				, DIVISION						as division
+				
+				, CUS_ID            			as cstId
+				, PHN_1             			as phn1
+				, PHN_2             			as phn2
+				, PHN_3             			as phn3
+				, staff.EMAIL       			as email
+				, OFFICE						as office
+				, SRT_CD            			as srtCd
+				, STAT_SEQ						as statSeq
+				, PERMISSION        			as permission
+				, staff.SABUN         			as sabun
+				, staff.EMAIL_ID	  			as emailId
+				, staff.EMAIL_PASSWD  			as emailPasswd
+				
+				, PRE_STAFF						as preStaff
+				, PRE_STAFF_CD					as preStaffCd
+				, REVIEW_LEVEL					as reviewLevel
+				, IFNULL(profile.MEZZ_L,'')		as mezzL
+				, IFNULL(profile.MEZZ_N,'')		as mezzN
+				, IFNULL(profile.ANAL_YN,'') 	as analYn
+				
+			FROM IB_STAFF 							AS staff
+			LEFT OUTER JOIN BASE.BS_USER_PROFILE 	AS profile ON staff.S_NB = profile.USER_ID
+			 
+		<dynamic prepend="WHERE" >
+			<isNotEmpty prepend="AND" property= "usrId">
+				USR_ID = <![CDATA[#usrId#]]>
+			</isNotEmpty>
+		</dynamic>
+		<dynamic prepend="ORDER BY" >
+			<isEmpty property="sort_t"> S_NB </isEmpty>
+			<isEqual property="sort_t" compareValue="1"> USR_NM, S_NB </isEqual>
+			<isEqual property="sort_t" compareValue="2"> SRT_CD, S_NB </isEqual>
+			<isEqual property="sort_t" compareValue="3"> PERMISSION, S_NB </isEqual>
+			<isEqual property="sort_t" compareValue="4"> OFFICE, S_NB </isEqual>
+			<isEqual property="sort_t" compareValue="5"> TEAM, STAT_SEQ </isEqual>
+			<isEqual property="sort_t" compareValue="6"> DIVISION, STAT_SEQ </isEqual>
+		</dynamic>
+	</select>
+
+	<select id="personDAO.selectCheckStaffCnt" parameterClass="staffVO" resultClass="java.lang.Integer">
+			SELECT
+				 COUNT(1)
+			FROM IB_STAFF
+			WHERE USR_PW = <![CDATA[#usrPw#]]>
+		<isNotEmpty prepend="AND" property= "usrId">
+				USR_ID = <![CDATA[#usrId#]]>
+		</isNotEmpty>
+	</select>
+
+	<select id="personDAO.selectCheckIdCnt" parameterClass="staffVO" resultClass="java.lang.Integer">
+			SELECT
+				 COUNT(1)
+			FROM IB_STAFF
+		<dynamic prepend="WHERE" >
+			<isNotEmpty prepend="AND" property= "usrId">
+				<![CDATA[	USR_ID = #usrId#	]]>
+			</isNotEmpty>
+		</dynamic>
+	</select>
+
+	<update id="personDAO.updateStaffInfo">
+		<![CDATA[
+			UPDATE IB_STAFF
+			SET
+				  USR_ID     =  #usrId#
+				, USR_PW     =  #usrPw#
+				, USR_NM     =  #usrNm#
+				, PHN_1      =  #phn1#
+				, PHN_2      =  #phn2#
+				, PHN_3      =  #phn3#
+				, EMAIL      =  #email#
+				, EMAIL_ID   =  #emailId#
+				, EMAIL_PASSWD =  #emailPasswd#
+				, UP_DT      =  now()
+			WHERE S_NB       =  #sNb#
+		]]>
+	</update>
+
+	<update id="personDAO.modifyPassword">
+			UPDATE IB_STAFF
+			SET
+				  USR_PW     =  #usrPw#
+				, UP_DT      =  now()
+				, UP_ID      =  #rgId#
+<isNotEmpty property="srtCd"> 		, SRT_CD     =  #srtCd#</isNotEmpty>
+			WHERE S_NB       =  #sNb#
+	</update>
+
+	<update id="personDAO.updateStaffInformation">
+								UPDATE IB_STAFF
+								SET
+									  USR_ID     =  <![CDATA[#usrId#]]>
+									, USR_NM     =  <![CDATA[#usrNm#]]>
+									, UP_ID      =  <![CDATA[#rgId# ]]>
+									, UP_DT      =  now()
+<isNotEmpty property="srtCd"> 		, SRT_CD     =  <![CDATA[#srtCd#		]]></isNotEmpty>
+<isNotEmpty property="office">		, OFFICE     =  <![CDATA[#office#		]]></isNotEmpty>
+<isNotEmpty property="permission">	, PERMISSION =  <![CDATA[#permission#	]]></isNotEmpty>
+<isNotEmpty property="cstId">		, CUS_ID     =  <![CDATA[#cstId#		]]></isNotEmpty>
+									, TEAM		 =  #deptId#
+									
+<isNotEmpty property="statSeq">		, STAT_SEQ	 =  #statSeq#		</isNotEmpty>
+									
+									, POSITION	 =  #position#
+									, DIVISION	 =  #division#			
+									
+									
+<isNotEmpty property="reviewLevel">	, REVIEW_LEVEL  =  #reviewLevel#</isNotEmpty>
+<isNotEmpty property="preStaff">	, PRE_STAFF     =  #preStaff#	</isNotEmpty>
+									, PRE_STAFF_CD  =  #preStaffCd#
+									
+									
+								WHERE S_NB       =  <![CDATA[#sNb#          ]]>
+	</update>
+
+
+	<select id="personDAO.selectMaxSnb" parameterClass="personVO" resultClass="personVO">
+			SELECT
+				  MAX(S_NB)       as sNb
+			FROM IB_CUSTOMER
+	</select>
+
+	<select id="personDAO.selectExcelDown" parameterClass="personVO" resultClass="personVO">
+		<![CDATA[
+			SELECT
+				  CST_NM                    as  cstNm
+				, IFNULL((SELECT CPN_NM FROM IB_COMPANY WHERE IB_COMPANY.CPN_ID = IB_CUSTOMER.CPN_ID),"-")      as  cpnNm
+				, IFNULL(POSITION,"-")                  as  position
+				, IFNULL(EMAIL,"-")                     as  email
+				, IFNULL(PHN_1,"-")                     as  phn1
+				, IFNULL(PHN_2,"-")                     as  phn2
+				, IFNULL(PHN_3,"-")                     as  phn3
+			FROM IB_CUSTOMER
+			ORDER BY cpnNm ASC, CST_NM ASC
+		]]>
+	</select>
+
+
+
+	<select id="personDAO.selectCstDealInfoList" parameterClass="companyVO" resultClass="egovMap">
+		<![CDATA[
+
+			SELECT
+				  A.S_NB                as  sNb
+				, A.S_NB_2nd            as  subSNb /* IB_COMPANY  SNB 인맥 */
+				, B.CPN_ID 				as  cpnId
+				, B.CPN_NM 				as  cpnNm
+				, B.S_NB 				as  cpnSNb
+				, C.USR_NM 				as  rgNm
+				, A.NOTE                as  note
+				, A.LV_CD               as  lvCd
+			FROM IB_CST_DEAL_INFO A
+				LEFT JOIN IB_COMPANY B ON B.S_NB = A.S_NB_2nd
+				LEFT JOIN IB_STAFF C ON C.USR_ID = A.RG_ID
+			WHERE 1=1
+		]]>
+			<isNotEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	A.S_NB_1st = #cstSnb# 		]]>
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	A.S_NB_1st = 0		]]>
+			</isEmpty>
+			<isNotEmpty prepend="AND" property="netYN">
+				<![CDATA[	A.NET_YN = #netYN# 		]]>
+			</isNotEmpty>
+			ORDER BY lvCd DESC
+	</select>
+
+
+	<select id="personDAO.selectResponseStaffList" parameterClass="companyVO" resultClass="companyVO">
+		<![CDATA[
+
+			SELECT
+			    RG_NM 			AS  rgNm
+			FROM IB_OFFER
+			WHERE 1=1
+		]]>
+			<isNotEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	CST_ID = #cstSnb# 		]]>
+			</isNotEmpty>
+		<![CDATA[
+			GROUP BY RG_NM
+			ORDER BY COUNT(RG_NM) DESC
+			LIMIT 1
+		]]>
+	</select>
+
+
+	<select id="personDAO.selectStockFirmIBsList" parameterClass="personVO" resultClass="personVO">
+		
+			SELECT
+				  S_NB                      as  sNb
+				, CST_NM                    as  cstNm
+				, A.CPN_ID                    as  cpnId
+				, D.CPN_NM				    as  cpnNm
+				, EMAIL                     as  email
+				, PHN_1                     as  phn1
+				, PHN_2                     as  phn2
+				, PHN_3                     as  phn3
+				, POSITION                  as  position
+				<!-- , CASE WHEN CATEGORY_PERSON_CD = '00000' THEN '일반' WHEN CATEGORY_PERSON_CD = '00001' THEN '심사역' WHEN CATEGORY_PERSON_CD = '00002' THEN '운용인재' WHEN CATEGORY_PERSON_CD = '00003' THEN '심사역, 운용인재' END        as  categoryPSNm -->
+				, (select cd_nm from IB_COMMON_CODE where menu_cd = '00013' and dtail_cd = A.CATEGORY_PERSON_CD) as  categoryPSNm
+				
+				, CATEGORY_PERSON_CD		as  categoryPSCd
+				, B.TM 						as  TMsnb
+				, B.rgNm						as  rgNm
+				, B.rgId						as  rgId
+				, (case when B.meet = 0 then ' ' when b.meet != 0 then b.meet end)						as  meetCnt
+				, (case when B.phoneCall = 0 then ' ' when b.phoneCall != 0 then b.phoneCall end)		as  callCnt
+				, (case when B.nightMeet = 0 then ' ' when b.nightMeet != 0 then b.nightMeet end)		as  nightMeetCnt
+				, (case when B.deal = 0 then ' ' when B.deal != 0 then B.deal end)						as  dealCnt
+				, (case when B.dealS = 0 then ' ' when B.dealS != 0 then B.dealS end)					as  dealSCnt
+				, (case when B.price = 0 then ' ' when B.price != 0 then B.price end)					as  price
+				, (CASE WHEN C.STAR IS null THEN 0 WHEN C.STAR IS NOT NULL THEN C.STAR END)			as  star
+				, C.snb			as  starSnb
+				, b.tmDt			as  tmDt
+			FROM
+				(SELECT CST_ID
+						, COUNT(CST_ID) as TM
+						, RG_NM as rgNm
+						, RG_ID as rgId
+						, concat('`',max(replace(substring(tm_dt,3,8),'-','.'))) as tmDt
+						, COUNT(CASE WHEN OFFER_CD = '00009' THEN 1 END) as phoneCall
+						, COUNT(CASE WHEN OFFER_CD = '00001' THEN 1 END) meet
+						, COUNT(CASE WHEN OFFER_CD = '00008' THEN 1 END) nightMeet
+						, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' THEN 1 END) deal
+						, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' AND PROGRESS_CD = '00003' THEN 1 END) dealS
+						, SUM(CASE WHEN PROGRESS_CD = '00003' THEN PRICE END) price
+				   FROM IB_OFFER
+				  WHERE RG_NM = #TMname#
+			   GROUP BY CST_ID 
+			   LIMIT 10000) B
+			JOIN
+				IB_CUSTOMER A ON B.CST_ID = A.S_NB
+			LEFT OUTER JOIN(
+				SELECT
+						S_NB as snb
+					  , CST_S_NB as cstSnb
+					  , STAR
+				  FROM IB_BOOKMARK
+				 WHERE STAFF_NM = #TMname# ) C ON C.cstSnb = A.S_NB
+			LEFT OUTER JOIN(
+      		  SELECT
+         		   CPN_NM
+          		  ,CPN_ID
+         	   FROM IB_COMPANY) D ON A.CPN_ID = D.CPN_ID
+			WHERE
+				D.CPN_NM LIKE '%증권%'
+				or D.CPN_NM LIKE '%신한금융%'
+			ORDER BY cpnNm, cstNm ASC
+		
+	</select>
+	
+	<select id="personDAO.selectStockFirmIBsListNew" parameterClass="personVO" resultClass="HashMap">
+		SELECT
+				  #TMname#						as myNm
+				  
+				, O.S_NB						as sNb
+				, O.CST_NM						as cstNm
+				, O.CPN_ID						as cpnId
+				, Q.CPN_NM						as cpnNm
+				
+				, O.EMAIL                     	as  email
+				, O.PHN_1                     	as  phn1
+				, O.PHN_2                     	as  phn2
+				, O.PHN_3                     	as  phn3
+				, O.POSITION                  	as  position
+				<!-- , CASE WHEN O.CATEGORY_PERSON_CD = '00000' THEN '일반' WHEN O.CATEGORY_PERSON_CD = '00001' THEN '심사역' WHEN O.CATEGORY_PERSON_CD = '00002' THEN '운용인재' WHEN O.CATEGORY_PERSON_CD = '00003' THEN '심사역, 운용인재' END        as  categoryPSNm -->
+				, (select cd_nm from IB_COMMON_CODE where menu_cd = '00013' and dtail_cd = A.CATEGORY_PERSON_CD) as  categoryPSNm
+				
+				
+				, O.CATEGORY_PERSON_CD			as  categoryPSCd
+				
+				, (CASE WHEN P.STAR IS null THEN 0 WHEN P.STAR IS NOT NULL THEN P.STAR END)				as  star
+				, P.snb							as  starSnb
+				
+				, L.TM 							as  TMsnb
+				, L.rgNm						as  rgNm
+				, L.rgId						as  rgId
+				, (case when L.meet = 0 then ' ' when L.meet != 0 then L.meet end)						as  meetCnt
+				, (case when L.phoneCall = 0 then ' ' when L.phoneCall != 0 then L.phoneCall end)		as  callCnt
+				, (case when L.nightMeet = 0 then ' ' when L.nightMeet != 0 then L.nightMeet end)		as  nightMeetCnt
+				, (case when L.deal = 0 then ' ' when L.deal != 0 then L.deal end)						as  dealCnt
+				, (case when L.dealS = 0 then ' ' when L.dealS != 0 then L.dealS end)					as  dealSCnt
+				, (case when L.price = 0 then ' ' when L.price != 0 then L.price end)					as  price
+				, L.tmDt						as  tmDt
+				
+				, mgmt.cnt						as usrCnt
+				, mgmt.usr_nm					as usrNm
+				
+			FROM
+			
+				base.bs_customer_manager K
+				
+			LEFT JOIN 
+			
+				IB_CUSTOMER O ON K.customer_id = O.S_NB	
+			<!-- 
+			LEFT JOIN(
+						SELECT a.target_snb, count(a.target_snb) as cnt	  
+							  ,GROUP_CONCAT((select concat(usr_nm, date_format(a.rg_dt,'%Y-%m-%d')) from ib_staff where usr_id = a.up_id) order by a.rg_dt SEPARATOR ' > ') as usr_nm_dt
+						      ,GROUP_CONCAT((select usr_nm from ib_staff where usr_id = a.up_id) order by a.rg_dt SEPARATOR ' > ') as usr_nm
+														
+						                                FROM ib_incharge a
+														where a.category = '2'														 
+														 GROUP BY a.target_snb			
+						) R ON R.target_snb = O.S_NB
+			 -->
+			LEFT JOIN (SELECT a.customer_id, count(a.customer_id) as cnt
+							 ,GROUP_CONCAT((SELECT usr_nm FROM ib_staff WHERE s_nb = a.staff_id) ORDER BY a.seq
+											SEPARATOR ' > ') AS usr_nm
+					    FROM base.bs_customer_manager a
+					    WHERE a.`status` in ('T', 'Y')					        
+					    GROUP BY a.customer_id) mgmt ON mgmt.customer_id = O.S_NB
+			
+			LEFT JOIN(
+						SELECT
+								S_NB as snb
+							  , CST_S_NB as cstSnb
+							  , STAR
+						  FROM IB_BOOKMARK
+						 WHERE STAFF_NM = #TMname# ) P ON P.cstSnb = O.S_NB
+				 
+			LEFT JOIN
+				IB_COMPANY Q ON Q.CPN_ID = O.CPN_ID
+						
+			LEFT JOIN
+			
+				(
+					SELECT *
+					FROM
+						IB_CUSTOMER A
+					
+					JOIN
+					
+						(SELECT CST_ID
+								, COUNT(CST_ID) as TM
+								, RG_NM as rgNm
+								, RG_ID as rgId
+								, concat('`',max(replace(substring(tm_dt,3,8),'-','.'))) as tmDt
+								, COUNT(CASE WHEN OFFER_CD = '00009' THEN 1 END) as phoneCall
+								, COUNT(CASE WHEN OFFER_CD = '00001' THEN 1 END) meet
+								, COUNT(CASE WHEN OFFER_CD = '00008' THEN 1 END) nightMeet
+								, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' THEN 1 END) deal
+								, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' AND PROGRESS_CD = '00003' THEN 1 END) dealS
+								, SUM(CASE WHEN PROGRESS_CD = '00003' THEN PRICE END) price
+						   FROM IB_OFFER
+						  WHERE RG_NM = #TMname#
+					   GROUP BY CST_ID 
+					   ) B ON B.CST_ID = A.S_NB
+										 
+					WHERE 1=1
+					  
+				) L
+					ON K.customer_id = L.s_nb		
+		
+		where 1=1
+		  and K.staff_id = (select s_nb from ib_staff where usr_id = #usrId#)
+		  and K.status = 'Y'
+		  
+		  <isEqual prepend="" property="isStock" compareValue="Y">
+		  and Q.category_business = '증권'		  
+		  </isEqual>
+		  
+		  <!-- and (Q.CPN_NM LIKE '%증권%' or Q.CPN_NM LIKE '%신한금융%') -->
+		
+		<isEmpty prepend="" property="sortCol">
+			ORDER BY cpnNm ASC, cstNm ASC
+		</isEmpty>
+		<isNotEmpty prepend="" property="sortCol">
+			<isEqual property="sortCol" compareValue="CPN">		<!-- 증권사 -->
+			ORDER BY cpnNm $sortAD$, cstNm ASC
+			</isEqual>
+			<isEqual property="sortCol" compareValue="NM">		<!-- 이름 -->
+			ORDER BY cstNm $sortAD$, cpnNm ASC
+			</isEqual>
+			<isEqual property="sortCol" compareValue="CDATE">	<!-- 최근연락 -->
+			ORDER BY tmDt $sortAD$, cpnNm ASC, cstNm ASC
+			</isEqual>
+		</isNotEmpty>
+		
+	</select>
+
+	<select id="personDAO.selectStockFirmIBsListNewNotyet" parameterClass="personVO" resultClass="HashMap">
+		SELECT
+				  ''							as myNm
+				  
+				, O.S_NB						as sNb
+				, O.CST_NM						as cstNm
+				, O.CPN_ID						as cpnId
+				, Q.CPN_NM						as cpnNm
+				
+				, O.EMAIL                     	as  email
+				, O.PHN_1                     	as  phn1
+				, O.PHN_2                     	as  phn2
+				, O.PHN_3                     	as  phn3
+				, O.POSITION                  	as  position
+				<!-- , CASE WHEN O.CATEGORY_PERSON_CD = '00000' THEN '일반' WHEN O.CATEGORY_PERSON_CD = '00001' THEN '심사역' WHEN O.CATEGORY_PERSON_CD = '00002' THEN '운용인재' WHEN O.CATEGORY_PERSON_CD = '00003' THEN '심사역, 운용인재' END        as  categoryPSNm -->
+				, (select cd_nm from IB_COMMON_CODE where menu_cd = '00013' and dtail_cd = O.CATEGORY_PERSON_CD) as  categoryPSNm
+				
+				, O.CATEGORY_PERSON_CD			as  categoryPSCd
+				
+				, 0								as  star
+				, ''							as  starSnb
+				
+				, L.TM 							as  TMsnb
+				, L.rgNm						as  rgNm
+				, L.rgId						as  rgId
+				, (case when L.meet = 0 then ' ' when L.meet != 0 then L.meet end)						as  meetCnt
+				, (case when L.phoneCall = 0 then ' ' when L.phoneCall != 0 then L.phoneCall end)		as  callCnt
+				, (case when L.nightMeet = 0 then ' ' when L.nightMeet != 0 then L.nightMeet end)		as  nightMeetCnt
+				, (case when L.deal = 0 then ' ' when L.deal != 0 then L.deal end)						as  dealCnt
+				, (case when L.dealS = 0 then ' ' when L.dealS != 0 then L.dealS end)					as  dealSCnt
+				, (case when L.price = 0 then ' ' when L.price != 0 then L.price end)					as  price
+				, L.tmDt						as  tmDt
+				
+				, 0								as usrCnt
+				, ''							as usrNm
+				
+			FROM
+			
+				IB_CUSTOMER O
+			
+			LEFT JOIN
+				IB_COMPANY Q ON Q.CPN_ID = O.CPN_ID
+						
+			LEFT JOIN
+			
+				(
+					SELECT *
+					FROM
+						IB_CUSTOMER A
+					
+					JOIN
+					
+						(SELECT CST_ID
+								, COUNT(CST_ID) as TM
+								, RG_NM as rgNm
+								, RG_ID as rgId
+								, concat('`',max(replace(substring(tm_dt,3,8),'-','.'))) as tmDt
+								, COUNT(CASE WHEN OFFER_CD = '00009' THEN 1 END) as phoneCall
+								, COUNT(CASE WHEN OFFER_CD = '00001' THEN 1 END) meet
+								, COUNT(CASE WHEN OFFER_CD = '00008' THEN 1 END) nightMeet
+								, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' THEN 1 END) deal
+								, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' AND PROGRESS_CD = '00003' THEN 1 END) dealS
+								, SUM(CASE WHEN PROGRESS_CD = '00003' THEN PRICE END) price
+						   FROM IB_OFFER
+						  WHERE 1=1
+					   GROUP BY CST_ID 
+					   ) B ON B.CST_ID = A.S_NB
+										 
+					WHERE 1=1
+					  
+				) L
+					ON O.s_nb = L.s_nb		
+		
+		where 1=1
+		
+          and not exists (
+			select 1
+              from base.bs_customer_manager
+			 where customer_id = O.s_nb
+          )
+          
+          <isEqual prepend="" property="isStock" compareValue="Y">
+		  and Q.category_business = '증권'		  
+		  </isEqual>
+          
+          <!--  and (Q.CPN_NM LIKE '%증권%' or Q.CPN_NM LIKE '%신한금융%') -->
+		<isEmpty prepend="" property="sortCol">
+			ORDER BY cpnNm ASC, cstNm ASC
+		</isEmpty>
+		<isNotEmpty prepend="" property="sortCol">
+			<isEqual property="sortCol" compareValue="CPN">		<!-- 증권사 -->
+			ORDER BY cpnNm $sortAD$, cstNm ASC
+			</isEqual>
+			<isEqual property="sortCol" compareValue="NM">		<!-- 이름 -->
+			ORDER BY cstNm $sortAD$, cpnNm ASC
+			</isEqual>
+			<isEqual property="sortCol" compareValue="CDATE">	<!-- 최근연락 -->
+			ORDER BY tmDt $sortAD$, cpnNm ASC, cstNm ASC
+			</isEqual>
+		</isNotEmpty>
+	</select>
+
+
+	<!-- 고객 담당자 등록 -->
+	<insert id="personDAO.doSaveCstManager" parameterClass="HashMap">
+		INSERT INTO base.bs_customer_manager(
+							    customer_id
+							  , staff_id
+							  , seq
+							  , memo
+							  , manage_date
+							  , status
+							  
+							  , CREATED_BY
+							  , CREATE_DATE
+							  , UPDATED_BY
+						  	  , UPDATE_DATE							  
+					 		) 
+				 	<dynamic>
+						<iterate prepend="VALUES" conjunction="," property="cstArrayList">
+							(
+								#cstArrayList[]#
+							  , #usrId# 
+							  , (select ifnull(max(m.seq) + 10, 10) from base.bs_customer_manager m where m.customer_id = #cstArrayList[]#)
+							  , (case when #memo# = '' then null else #memo# end)
+							  , now()
+							  , 'A'
+							  
+							  ,#userSeq#
+							  ,now()
+							  ,#userSeq#
+							  ,now()
+					 		)
+						</iterate>
+					</dynamic>
+	</insert>
+	
+	
+	<!-- 고객 담당자 바로 등록(상태값 'Y') -->
+	<insert id="person.doSaveCstManagerDirect" parameterClass="HashMap">
+		INSERT INTO base.bs_customer_manager(
+							    customer_id
+							  , staff_id
+							  , seq
+							  , memo
+							  , manage_date
+							  , status
+							  
+							  , CREATED_BY
+							  , CREATE_DATE
+							  , UPDATED_BY
+						  	  , UPDATE_DATE							  
+					 		) 
+				 	values
+							(
+								#cstId#
+							  , (select s_nb from ib_staff where cus_id = #usrCusId#)
+							  , (select ifnull(max(m.seq) + 10, 10) from base.bs_customer_manager m where m.customer_id = #cstId#)
+							  , (case when #memo# = '' then null else #memo# end)
+							  , now()
+							  , 'Y'
+							  
+							  ,#userSeq#
+							  ,now()
+							  ,#userSeq#
+							  ,now()
+					 		)
+	</insert>
+	
+	
+	<!-- 증권사 ib 고객 담당자 등록 -->
+	<insert id="personDAO.doSaveCstManager0000000000" parameterClass="HashMap">
+		INSERT INTO ib_incharge(
+							    target_snb
+							  , category
+							  , RG_DT
+							  , UP_DT
+							  , RG_ID
+							  , UP_ID
+					 		) 
+				 	<dynamic>
+						<iterate prepend="VALUES" conjunction="," property="cstArrayList">
+							(
+								#cstArrayList[]#
+							  , 2
+							  , now()
+							  , now()
+							  , #usrId#
+							  , #usrId#
+					 		)
+						</iterate>
+					</dynamic>
+	</insert>
+
+
+	<delete id="personDAO.deletePersonNetInfo">
+		<![CDATA[
+			DELETE FROM 				]]><isEqual property="cate" compareValue="cstNet"><![CDATA[
+				IB_NET_POINT			]]></isEqual><isEqual property="cate" compareValue="cpnNet"><![CDATA[
+				IB_CST_DEAL_INFO		]]></isEqual><isEqual property="cate" compareValue="dealNet"><![CDATA[
+				IB_CST_DEAL_INFO		]]></isEqual><isEqual property="cate" compareValue="info"><![CDATA[
+				IB_NOTE					]]></isEqual><![CDATA[
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+
+	<update id="personDAO.modifyPersonNetInfo">
+		<![CDATA[
+			UPDATE 					]]><isEqual property="cate" compareValue="cstNet"><![CDATA[
+				IB_NET_POINT		]]></isEqual><isEqual property="cate" compareValue="cpnNet"><![CDATA[
+				IB_CST_DEAL_INFO	]]></isEqual><isEqual property="cate" compareValue="dealNet"><![CDATA[
+				IB_CST_DEAL_INFO	]]></isEqual><isEqual property="cate" compareValue="info"><![CDATA[
+				IB_NOTE				]]></isEqual><![CDATA[
+			SET
+				  NOTE      =  #note#
+				, UP_DT     =  now()
+				, UP_ID     =  #rgId#	]]><isEqual property="cate" compareValue="info"><![CDATA[
+				, TITLE     = #title#	]]></isEqual><![CDATA[
+			WHERE S_NB      =  #sNb#
+		]]>
+	</update>
+
+	<update id="personDAO.saveNetPoionLvCD">
+		<![CDATA[
+			UPDATE 					]]><isEqual property="flag" compareValue="NP"><![CDATA[
+				IB_NET_POINT		]]></isEqual><isEqual property="flag" compareValue="CS"><![CDATA[
+				IB_CUSTOMER 		]]></isEqual><isEqual property="flag" compareValue="CD"><![CDATA[
+				IB_CST_DEAL_INFO	]]></isEqual><![CDATA[
+			SET
+				  UP_DT     =  now()
+				, UP_ID     =  #rgId#
+				, LV_CD     =  #lvCd#
+			WHERE S_NB      =  #sNb#
+		]]>
+	</update>
+
+
+	<select id="personDAO.selectNetPointLatest00" parameterClass="personVO" resultClass="personVO">
+		<![CDATA[
+			SELECT DATE(A.RG_DT) 	as rgDt
+			     , D.CPN_NM 		as cpnNm1st
+			     , B.CST_NM 		as cstNm1st
+			     , B.POSITION 		as position1st
+			     , E.CPN_NM 		as cpnNm2nd
+			     , C.CST_NM 		as cstNm2nd
+			     , C.POSITION 		as position2nd
+			     , A.NOTE 			as note
+			     , F.USR_NM			as rgNm
+
+			  FROM IB_NET_POINT A
+		 LEFT JOIN IB_CUSTOMER B ON A.S_NB_1st = B.S_NB
+		 LEFT JOIN IB_CUSTOMER C ON A.S_NB_2nd = C.S_NB
+		 LEFT JOIN IB_COMPANY D ON B.CPN_ID = D.CPN_ID
+		 LEFT JOIN IB_COMPANY E ON C.CPN_ID = E.CPN_ID
+		 LEFT JOIN IB_STAFF F ON A.RG_ID = F.USR_ID
+		  ORDER BY A.RG_DT DESC
+			 LIMIT 20
+		]]>
+	</select>
+
+	<select id="personDAO.selectNetPointLatest" parameterClass="personVO" resultClass="egovMap">
+		<![CDATA[
+			SELECT * FROM(
+						SELECT
+							  DATE(A.RG_DT) 	as rgDt
+							, A.RG_DT			as rgDtOri
+							, CASE WHEN A.NET_YN = 'Y' THEN '법인넷' ELSE '딜경력' END      as  netYn
+			        		, E.CPN_NM 		as cpnNm1st
+							, D.CST_NM 		as cstNm1st
+			        		, D.POSITION 		as position1st
+							, B.CPN_NM 				as  cpnNm2nd
+			        		, '' as cstNm2nd
+			        		, '' as position2nd
+							, A.NOTE                as  note
+							, C.USR_NM 				as  rgNm
+							, A.S_NB				as sNb
+							, A.S_NB_1st			as snb1st
+							, A.S_NB_2nd			as snb2nd
+						FROM IB_CST_DEAL_INFO A
+							LEFT JOIN IB_COMPANY B ON B.S_NB = A.S_NB_2nd
+							LEFT JOIN IB_STAFF C ON C.USR_ID = A.RG_ID
+			        LEFT JOIN IB_CUSTOMER D ON A.S_NB_1st = D.S_NB
+			        LEFT JOIN IB_COMPANY E ON D.CPN_ID = E.CPN_ID
+					]]><isNotEmpty property="choice_day"><![CDATA[
+						LEFT JOIN (SELECT OFFER_SNB FROM IB_MAINTABLE_CHECK WHERE CATEGORY = '00004' AND RG_ID = #rgId#) MTC ON MTC.OFFER_SNB = A.S_NB
+					]]></isNotEmpty><dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="choice_day">
+							<![CDATA[	(MTC.OFFER_SNB = '' OR MTC.OFFER_SNB IS NULL) AND A.RG_DT between CONCAT (case when #choice_yearS# is null or #choice_yearS# = '' then #choice_year# else #choice_yearS# end, case when #choice_monthS# is null or #choice_monthS# = '' then #choice_month# else #choice_monthS# end, #choice_dayS# ) and CONCAT (#choice_year#, #choice_month#, #choice_day#, '235959') 		]]>
+						</isNotEmpty></dynamic><![CDATA[
+
+			UNION
+
+						SELECT DATE(A.RG_DT) 	as rgDt
+							 , A.RG_DT			as rgDtOri
+						     , '인물넷' 			as netYn
+						     , D.CPN_NM 		as cpnNm1st
+						     , B.CST_NM 		as cstNm1st
+						     , B.POSITION 		as position1st
+						     , E.CPN_NM 		as cpnNm2nd
+						     , C.CST_NM 		as cstNm2nd
+						     , C.POSITION 		as position2nd
+						     , A.NOTE 			as note
+						     , F.USR_NM			as rgNm
+						     , A.S_NB			as sNb
+						     , A.S_NB_1st		as snb1st
+							 , A.S_NB_2nd			as snb2nd
+						  FROM IB_NET_POINT A
+					 LEFT JOIN IB_CUSTOMER B ON A.S_NB_1st = B.S_NB
+					 LEFT JOIN IB_CUSTOMER C ON A.S_NB_2nd = C.S_NB
+					 LEFT JOIN IB_COMPANY D ON B.CPN_ID = D.CPN_ID
+					 LEFT JOIN IB_COMPANY E ON C.CPN_ID = E.CPN_ID
+					 LEFT JOIN IB_STAFF F ON A.RG_ID = F.USR_ID
+					]]><isNotEmpty property="choice_day"><![CDATA[
+						LEFT JOIN (SELECT OFFER_SNB FROM IB_MAINTABLE_CHECK WHERE CATEGORY = '00003' AND RG_ID = #rgId#) MTC ON MTC.OFFER_SNB = A.S_NB
+					]]></isNotEmpty><dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="choice_day">
+							<![CDATA[	(MTC.OFFER_SNB = '' OR MTC.OFFER_SNB IS NULL) AND A.RG_DT between CONCAT (case when #choice_yearS# is null or #choice_yearS# = '' then #choice_year# else #choice_yearS# end, case when #choice_monthS# is null or #choice_monthS# = '' then #choice_month# else #choice_monthS# end, #choice_dayS# ) and CONCAT (#choice_year#, #choice_month#, #choice_day#, '235959') 		]]>
+						</isNotEmpty></dynamic><![CDATA[
+
+			UNION
+
+						SELECT CASE WHEN A.RG_DT < A.UP_DT THEN DATE(A.UP_DT) ELSE DATE(A.RG_DT) END	as rgDt
+							 , CASE WHEN A.RG_DT < A.UP_DT THEN A.UP_DT ELSE A.RG_DT END				as rgDtOri
+						     , CASE WHEN A.RG_DT < A.UP_DT THEN '인물수정' ELSE '인물추가' END 			as netYn
+						     , B.CPN_NM 		as cpnNm1st
+						     , A.CST_NM 		as cstNm1st
+						     , A.POSITION 		as position1st
+						     , '' 		as cpnNm2nd
+						     , '' 		as cstNm2nd
+						     , '' 		as position2nd
+						     , '' 			as note
+						     , CASE WHEN A.RG_DT < A.UP_DT THEN D.USR_NM ELSE C.USR_NM END			as rgNm
+						     , A.S_NB			as sNb
+						     , A.S_NB			as snb1st
+							 , ''			as snb2nd
+						  FROM IB_CUSTOMER A
+					 LEFT JOIN IB_COMPANY B ON A.CPN_ID = B.CPN_ID
+					 LEFT JOIN IB_STAFF C ON A.RG_ID = C.USR_ID
+					 LEFT JOIN IB_STAFF D ON A.UP_ID = D.USR_ID
+					 ]]><isNotEmpty property="choice_day"><![CDATA[
+						LEFT JOIN (SELECT OFFER_SNB FROM IB_MAINTABLE_CHECK WHERE CATEGORY = '00002' AND RG_ID = #rgId#) MTC ON MTC.OFFER_SNB = A.S_NB
+					 ]]></isNotEmpty>
+					 <dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="choice_day">
+							<![CDATA[	(MTC.OFFER_SNB = '' OR MTC.OFFER_SNB IS NULL) 
+									AND (CASE WHEN A.RG_DT < A.UP_DT THEN A.UP_DT ELSE A.RG_DT END)
+										BETWEEN
+											CONCAT (case when #choice_yearS# is null or #choice_yearS# = '' then #choice_year# else #choice_yearS# end
+													, case when #choice_monthS# is null or #choice_monthS# = '' then #choice_month# else #choice_monthS# end
+													, #choice_dayS# )
+											AND
+											CONCAT (#choice_year#, #choice_month#, #choice_day#, '235959') 		]]>
+						</isNotEmpty>
+					 </dynamic>
+					<![CDATA[
+					ORDER BY rgDtOri DESC
+			)UO
+			ORDER BY uo.rgDt DESC
+		]]>
+		<isNotEqual property="selectInfo" compareValue="main">
+			LIMIT 70
+		</isNotEqual>
+		<isEqual property="selectInfo" compareValue="main">
+			limit 50
+		</isEqual>
+		
+		/* personDAO.selectNetPointLatest */
+	</select>
+
+	<insert id="personDAO.insertStockFirmIBstar">
+		<![CDATA[
+			INSERT INTO IB_BOOKMARK
+				  (
+				    CST_S_NB
+				  , STAFF_NM
+				  , STAR
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #cstSnb#
+				  , #rgNm#
+				  , #star#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+		]]>
+	</insert>
+
+	<update id="personDAO.updateStockFirmIBstar">
+		<![CDATA[
+			UPDATE
+				IB_BOOKMARK
+			SET
+				  UP_DT     =  now()
+				, UP_ID     =  #rgId#
+				, STAR      =  #star#
+			WHERE S_NB      =  #starSnb#
+		]]>
+	</update>
+
+	<select id="personDAO.selectStockFirmBookmarkList" parameterClass="personVO" resultClass="egovMap">
+		<![CDATA[
+
+			SELECT
+				  S_NB                as  sNb
+				, CST_S_NB            as  cstSnb
+				, STAFF_NM 				as  rgNm
+			FROM IB_BOOKMARK
+			WHERE STAR = '1'
+		]]>
+			<isNotEmpty prepend="AND" property="cstSnb">
+				<![CDATA[	CST_S_NB = #cstSnb# 		]]>
+			</isNotEmpty>
+	</select>
+
+
+	<insert id="personDAO.insertStaff">
+		<![CDATA[
+			INSERT INTO IB_STAFF
+				  (
+				    USR_NM
+				  , USR_PW
+				  , USR_ID
+				  , OFFICE
+				  , position
+				  , PHN_1
+				  , PERMISSION
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #usrNm#
+				  , #usrPw#
+				  , #usrId#
+				  , #office#
+				  , #position#
+				  , #phn1#
+				  , #permission#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+		]]>
+	</insert>
+
+	<select id="personDAO.selectIntroducerList" parameterClass="personVO" resultClass="egovMap">
+		<![CDATA[
+			SELECT
+				   A.S_NB			as sNb
+				,  A.RG_SNB			as snb1st
+				,  B.CST_NM			as cstNm1st
+				,  B1.CPN_NM        as cpnNm1st
+				,  B.POSITION       as position1st
+				,  A.STAFF_SNB		as snb2nd
+				,  C.USR_NM			as staffNm
+				,  D.CST_NM         as cstNm2nd
+				,  A.CST_ID         as snb3rd
+				,  D1.CPN_NM        as cpnNm2nd
+				,  D.POSITION       as position2nd
+				,  A.COMMENT		as comment
+			 FROM  IB_INTRODUCER A
+		LEFT JOIN  IB_CUSTOMER B ON B.S_NB = A.RG_SNB
+		LEFT JOIN  IB_COMPANY B1 ON B1.CPN_ID = B.CPN_ID
+		LEFT JOIN  IB_STAFF C ON C.CUS_ID = A.STAFF_SNB
+		LEFT JOIN  IB_CUSTOMER D ON D.S_NB = A.CST_ID
+		LEFT JOIN  IB_COMPANY D1 ON D1.CPN_ID = D.CPN_ID
+		]]>
+		<dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="cstSnb">
+			  (A.RG_SNB 		= #cstSnb#
+			   OR  A.STAFF_SNB 	= #cstSnb#
+			   OR  A.CST_ID 	= #cstSnb#)
+			</isNotEmpty>
+		</dynamic>
+			<isNotEqual property="recordCountPerPage" compareValue="0">
+			limit #firstIndex#, #recordCountPerPage#
+			</isNotEqual>
+	</select>
+	<select id="personDAO.selectIntroducerListCnt" parameterClass="personVO" resultClass="java.lang.Integer">
+		<![CDATA[
+			SELECT count(1)	cnt
+			 FROM  IB_INTRODUCER A
+		]]>
+		<dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="cstSnb">
+			  (A.RG_SNB 		= #cstSnb#
+			   OR  A.STAFF_SNB 	= #cstSnb#
+			   OR  A.CST_ID 	= #cstSnb#)
+			</isNotEmpty>
+		</dynamic>
+	</select>
+
+	<update id="personDAO.updateIBstaffwithInside">
+		<![CDATA[
+			update ib_staff ib, erp.ERP_Per e
+			set
+				 ib.sabun 	= e.persabun
+				,ib.address = e.peraddr
+				,ib.email 	= e.peremail
+				,ib.phn_1 	= e.perphone
+				,ib.position= e.perposition
+				,ib.cus_id 	= (select cst.s_nb from ib_customer cst left join ib_company cpn on cpn.cpn_id = cst.cpn_id  where cpn.cpn_nm like '%시너지%' and cst_nm like concat('%',#usrNm#,'%') order by s_nb desc limit 1)
+			where e.delflag = 'N'
+			  and #usrNm# 	= e.pernm
+			  and ib.usr_nm = e.pernm
+		]]>
+	</update>
+	<select id="personDAO.selectMeetingList" parameterClass="personVO" resultClass="egovMap">
+		<![CDATA[
+			SELECT
+					A.S_NB			as  sNb
+				  , A.MEET_NM		as  meetNm
+				  , A.NOTE			as  note
+			 FROM  IB_SOCIAL_MEETING A
+			WHERE (A.MEET_NM LIKE CONCAT('%',#meetNm#,'%'))
+		]]>
+			ORDER BY A.MEET_NM ASC
+			<isNotEqual property="recordCountPerPage" compareValue="0">
+			limit #firstIndex#, #recordCountPerPage#
+			</isNotEqual>
+	</select>
+	
+	<insert id="personDAO.insertMeeting">
+		<![CDATA[
+			INSERT INTO IB_SOCIAL_MEETING
+				  (
+				    MEET_NM
+				  , NOTE
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #meetNm#
+				  , #note#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+		]]>
+	</insert>	
+
+	<select id="personDAO.selectAttendMeetingList" parameterClass="personVO" resultClass="egovMap">
+			SELECT
+					A.S_NB			as  sNb
+				  , A.MEET_SNB		as  meetSnb
+				  , B.MEET_NM		as  meetNm
+				  , A.CST_SNB		as  cstSnb
+				  , A.NOTE			as  note
+				  , C.USR_NM		as  rgNm
+				  , A.RG_DT			as  rgDt
+			 FROM  IB_CST_ATTEND_MEET A
+		LEFT JOIN  IB_SOCIAL_MEETING B on B.S_NB = A.MEET_SNB
+		LEFT JOIN  IB_STAFF C on C.USR_ID = A.RG_ID
+		<![CDATA[
+			WHERE  a.del_flag <> 'Y'
+			  and  a.cst_snb = #sNb#
+		]]>
+			ORDER BY B.MEET_NM ASC
+	</select>
+
+	<select id="personDAO.selectAttendMeetingListCnt" parameterClass="personVO" resultClass="java.lang.Integer">
+		<![CDATA[
+			SELECT count(1)	cnt
+			 FROM  IB_CST_ATTEND_MEET A
+			WHERE  a.del_flag <> 'Y'
+		]]>
+			<isNotEmpty prepend="AND" property="meetSnb">
+			  <![CDATA[ a.meet_snb = #meetSnb# ]]>
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="cstSnb">
+			  <![CDATA[ a.cst_snb = #cstSnb# ]]>
+			</isNotEmpty>
+	</select>
+	<insert id="personDAO.insertAttendMeet">
+		<![CDATA[
+			INSERT INTO IB_CST_ATTEND_MEET
+				  (
+				    MEET_SNB
+				  , CST_SNB
+				  , DEL_FLAG
+				  , NOTE
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID
+		 ) VALUES (
+				    #meetSnb#
+				  , #cstSnb#
+				  , 'N'
+				  , #note#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId#
+				  )
+		]]>
+	</insert>
+	
+	<update id="personDAO.updateAttendMeet">
+		<![CDATA[
+			update IB_CST_ATTEND_MEET AM
+			set
+				 AM.MEET_SNB 	= #meetSnb#
+				,AM.DEL_FLAG	= case when #delYn# = 'Y' then #delYn# else 'N' end
+				,AM.NOTE 		= #note#
+				,AM.UP_ID 		= #rgId#
+				,AM.UP_DT 		= now()
+			where S_NB =  #sNb#
+		]]>
+	</update>
+	
+	
+	
+	<select id="personDAO.selectCpnDeptList" parameterClass="Map" resultClass="HashMap">
+		SELECT COMPANY_ID	as cpnSnb
+			  ,DEPT_CODE	as deptCd
+		      ,KOR_NAME		as deptNm
+		      
+		  FROM BASE.BS_COMPANY_DEPARTMENT	A
+		  JOIN SYNERGYMAIN.IB_COMPANY		B ON A.COMPANY_ID = B.S_NB
+		 WHERE 1=1
+		   AND (CASE WHEN B.A_CPN_ID IS NULL OR B.A_CPN_ID = '' THEN CPN_ID ELSE A_CPN_ID END) = #cpnId#
+		   AND ENABLED = 'Y'
+		   AND DELETE_FLAG = 'N'
+		 ORDER BY DEPT_SEQ ASC
+		   
+		/* personDAO.selectCpnDeptList */	
+	</select>
+	
+	
+
+	<!-- 부서코드 반환(신규인 경우 등록후 반환) -->
+	<parameterMap id="pDeptCode" class="HashMap">		
+		<parameter property="cpnId" mode="IN" javaType="java.lang.String" jdbcType="VARCHAR"/>
+		<parameter property="deptNm" mode="IN" javaType="java.lang.String" jdbcType="VARCHAR"/>
+		<parameter property="deptDs" mode="IN" javaType="java.lang.String" jdbcType="VARCHAR"/>
+		<parameter property="loginId" mode="IN" javaType="java.lang.String" jdbcType="VARCHAR"/>
+		
+		<parameter property="cpnDeptId" mode="OUT" javaType="java.lang.String" jdbcType="VARCHAR"/>				
+		<parameter property="returnGood" mode="OUT" javaType="java.lang.String" jdbcType="VARCHAR"/>
+		<parameter property="returnCode" mode="OUT" javaType="java.lang.String" jdbcType="VARCHAR"/>
+		<parameter property="returnMsg" mode="OUT" javaType="java.lang.String" jdbcType="VARCHAR"/>
+		<parameter property="deptCode" mode="OUT" javaType="java.lang.String" jdbcType="VARCHAR"/>
+	</parameterMap>
+	
+	<procedure id="personDAO.getDeptCodeByCallProcedure" parameterClass="Map">
+		 { CALL base.Insert_Company_Dept_P(#cpnId#, #deptNm#, #deptDs#, #loginId#, #cpnDeptId#, #returnGood#, #returnCode#, #returnMsg#, #deptCode#) }
+	</procedure>
+	
+	
+	
+	
+	<!-- 고객리스트 -->
+	<select id="person.selectCustList" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+				  O.S_NB						as sNb
+				, O.CST_NM						as cstNm
+				, O.CPN_ID						as cpnId
+				, IFNULL(Q.CPN_NM, '')			as cpnNm
+				, Q.CATEGORY_BUSINESS			as cpnCate
+				
+                , O.CATEGORY_PERSON_CD			as custType
+                , ifnull((SELECT CD_NM	FROM IB_COMMON_CODE	WHERE MENU_CD = '00013' and DTAIL_CD = O.CATEGORY_PERSON_CD), '') as custTypeNm
+                
+				, O.EMAIL                     	as email
+				, O.PHN_1                     	as phn1
+				, O.PHN_2                     	as phn2
+				, O.PHN_3                     	as phn3
+				, O.POSITION                  	as position
+			
+				, L.rgNm						as rgNm
+				, L.rgId						as rgId
+				, (case when L.meet = 0 then ' ' when L.meet != 0 then L.meet end)						as  meetCnt
+				, (case when L.phoneCall = 0 then ' ' when L.phoneCall != 0 then L.phoneCall end)		as  callCnt
+				, (case when L.nightMeet = 0 then ' ' when L.nightMeet != 0 then L.nightMeet end)		as  nightMeetCnt
+				, (case when L.deal = 0 then ' ' when L.deal != 0 then L.deal end)						as  dealCnt
+				, (case when L.dealS = 0 then ' ' when L.dealS != 0 then L.dealS end)					as  dealSCnt
+				, (case when L.price = 0 then ' ' when L.price != 0 then L.price end)					as  price
+				, L.tmDt						as tmDt
+				
+				, C.STAFF_ID					as usrStaffSnb
+				,IFNULL(I.USR_NM, '') 			as usrNm
+				, I.SRT_CD						as srtCd
+				
+				, (SELECT MAX(LV_CD)
+					FROM IB_NET_POINT
+					WHERE 1=1					 
+					  AND ((S_NB_1ST = I.CUS_ID AND S_NB_2ND = O.S_NB)
+					  		OR (S_NB_1ST = O.S_NB AND S_NB_2ND = I.CUS_ID))) AS lvCd
+					  
+				, (SELECT COUNT(1)
+					FROM IB_NET_POINT
+					WHERE 1=1					 
+					  AND (S_NB_2ND = O.S_NB OR S_NB_1ST = O.S_NB)) AS netCnt
+                
+                , IFNULL(DATE_FORMAT((
+							SELECT RG_DT
+							  FROM IB_OFFER
+							 WHERE CST_ID = O.S_NB
+							 ORDER BY RG_DT DESC
+							 LIMIT 1                   
+						 ), '%y-%m-%d'),'')  AS lastDt
+                , (SELECT CD_NM FROM IB_COMMON_CODE WHERE MENU_CD = '00002' AND DTAIL_CD = (
+																							SELECT OFFER_CD
+																		                      FROM IB_OFFER
+																							 WHERE CST_ID = O.S_NB
+																							 ORDER BY S_NB DESC
+																		                     LIMIT 1
+																						 ))  AS lastType
+				, (SELECT CD_NM FROM IB_COMMON_CODE WHERE MENU_CD = '00011' AND DTAIL_CD = (
+																							SELECT MIDDLE_OFFER_CD
+																		                      FROM IB_OFFER
+																							 WHERE CST_ID = O.S_NB
+																							 ORDER BY S_NB DESC
+																		                     LIMIT 1
+																						 ))  AS lastType2
+                , (SELECT USR_NM FROM IB_STAFF WHERE USR_ID = (
+																SELECT RG_ID
+											                      FROM IB_OFFER
+																 WHERE CST_ID = O.S_NB
+																 ORDER BY RG_DT DESC
+											                     LIMIT 1                   
+															 ))  AS lastNm
+                
+                ,DATE_FORMAT(O.RG_DT, '%y-%m-%d') AS rgDt
+                
+                ,IFNULL((SELECT CUSTOMER_ID FROM BASE.BS_CUSTOMER_MANAGER WHERE CUSTOMER_ID = O.S_NB AND STATUS = 'A' LIMIT 1), '') AS isSending
+                
+			FROM
+				IB_CUSTOMER O
+				
+				
+			LEFT JOIN
+				BASE.BS_CUSTOMER_MANAGER C ON C.CUSTOMER_ID = O.S_NB AND C.STATUS = 'Y'
+				
+			LEFT JOIN
+				IB_STAFF I ON I.S_NB = C.STAFF_ID
+				
+			LEFT JOIN
+				IB_COMPANY Q ON Q.CPN_ID = O.CPN_ID
+			
+			
+			LEFT JOIN
+			
+				(
+					SELECT A.s_nb, B.*
+					FROM
+						IB_CUSTOMER A
+					
+					JOIN					
+						(SELECT CST_ID
+								, COUNT(CST_ID) as TM
+								, RG_NM as rgNm
+								, RG_ID as rgId
+								, concat('`',max(replace(substring(tm_dt,3,8),'-','.'))) as tmDt
+								, COUNT(CASE WHEN OFFER_CD = '00009' THEN 1 END) as phoneCall
+								, COUNT(CASE WHEN OFFER_CD = '00001' THEN 1 END) meet
+								, COUNT(CASE WHEN OFFER_CD = '00008' THEN 1 END) nightMeet
+								, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' THEN 1 END) deal
+								, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' AND PROGRESS_CD = '00003' THEN 1 END) dealS
+								, SUM(CASE WHEN PROGRESS_CD = '00003' THEN PRICE END) price
+						   FROM IB_OFFER
+						  WHERE 1=1
+					   GROUP BY CST_ID 
+					   ) B ON B.CST_ID = A.S_NB
+										 
+					WHERE 1=1
+					  
+				) L
+					ON L.s_nb = O.S_NB
+		
+		where 1=1
+		  AND O.DELETE_FLAG = 'N'
+        
+        <isNotEmpty property="srchCustNm">
+		  and ( O.CST_NM like concat('%',#srchCustNm#,'%') or O.CST_NM like concat('%',#srchCustNmKor#,'%') )
+        </isNotEmpty>
+        
+        <isNotEmpty property="srchCpnNm">
+		  and Q.CPN_NM like concat('%',#srchCpnNm#,'%')
+        </isNotEmpty>
+        
+        <isNotEmpty property="staffId">
+		  and exists(
+					select 1
+                      from base.bs_customer_manager K
+					 where K.staff_id in ($staffId$)
+                       and K.customer_id = O.S_NB
+                       and K.status = 'Y'
+					)
+        </isNotEmpty>
+        
+        <isNotEmpty property="isNotyet">
+          and not exists(
+					select 1
+                      from base.bs_customer_manager K
+                     where K.customer_id = O.S_NB
+                       and K.status = 'Y'
+					)
+		</isNotEmpty>
+		
+		<isNotEmpty property="isUnstaffCst">
+          and exists(
+					select 1
+                      from base.bs_customer_manager K
+                     where K.customer_id = O.S_NB
+                       and K.status = 'Y'
+                       and K.staff_id in (select s_nb from ib_staff where srt_cd = '10000' 
+                       <isNotEmpty property="division">
+                        	and division = #division#
+                       </isNotEmpty>
+                      )
+					)
+		</isNotEmpty>
+		
+		<isNotEmpty property="cstType">
+			and (
+			  O.CATEGORY_PERSON_CD = #cstType#
+			<isEqual prepend="" property="isStock" compareValue="Y">		<!-- 고객구분이 증권사IB 이면 -->
+			  or Q.category_business = '증권'								<!-- 고객구분이 증권사IB가 아니더라도, 고객의 회사가 증권사인 고객도 불러온다 -->
+			</isEqual>
+			)
+		</isNotEmpty>
+	
+		<isNotEmpty property="isNew">
+		  and o.rg_dt like concat(date_format(now(), '%Y-%m-%d'), '%')
+          and o.rg_id like #usrId#
+		  order by o.s_nb desc
+        </isNotEmpty>
+        
+        <isEmpty property="isNew">
+			<isEmpty prepend="" property="sortCol">
+				ORDER BY tmDt desc, cpnNm ASC, cstNm ASC
+			</isEmpty>
+			<isNotEmpty prepend="" property="sortCol">
+				<isEqual property="sortCol" compareValue="CPN">		<!-- 증권사 -->
+				ORDER BY cpnNm $sortAD$, cstNm ASC
+				</isEqual>
+				<isEqual property="sortCol" compareValue="NM">		<!-- 이름 -->
+				ORDER BY cstNm $sortAD$, cpnNm ASC
+				</isEqual>
+				<isEqual property="sortCol" compareValue="CDATE">	<!-- 최근연락 -->
+				ORDER BY tmDt $sortAD$, cpnNm ASC, cstNm ASC
+				</isEqual>
+				<isEqual property="sortCol" compareValue="RGDATE">	<!-- 등록일 -->
+				ORDER BY rgDt $sortAD$, cpnNm ASC, cstNm ASC
+				</isEqual>
+				<isEqual property="sortCol" compareValue="CSTTYPE">	<!-- 고객구분 -->
+				ORDER BY custTypeNm $sortAD$, cpnNm ASC, cstNm ASC
+				</isEqual>
+			</isNotEmpty>
+        </isEmpty> 
+         
+		/* person.selectCustList */		
+	</select>
+	
+	
+	<select id="person.selectCustListCount" parameterClass="HashMap" resultClass="Integer">
+		SELECT
+				count(1)
+                
+			FROM
+				IB_CUSTOMER O
+				
+				
+			LEFT JOIN
+				base.bs_customer_manager c on c.customer_id = o.s_nb and c.status = 'Y'
+				
+				
+			LEFT JOIN
+				IB_COMPANY Q ON Q.CPN_ID = O.CPN_ID
+			
+			
+			LEFT JOIN
+			
+				(
+					SELECT A.s_nb, B.*
+					FROM
+						IB_CUSTOMER A
+					
+					JOIN					
+						(SELECT CST_ID
+								, COUNT(CST_ID) as TM
+								, RG_NM as rgNm
+								, RG_ID as rgId
+								, concat('`',max(replace(substring(tm_dt,3,8),'-','.'))) as tmDt
+								, COUNT(CASE WHEN OFFER_CD = '00009' THEN 1 END) as phoneCall
+								, COUNT(CASE WHEN OFFER_CD = '00001' THEN 1 END) meet
+								, COUNT(CASE WHEN OFFER_CD = '00008' THEN 1 END) nightMeet
+								, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' THEN 1 END) deal
+								, COUNT(CASE WHEN MIDDLE_OFFER_CD != '00000' AND PROGRESS_CD = '00003' THEN 1 END) dealS
+								, SUM(CASE WHEN PROGRESS_CD = '00003' THEN PRICE END) price
+						   FROM IB_OFFER
+						  WHERE 1=1
+					   GROUP BY CST_ID 
+					   ) B ON B.CST_ID = A.S_NB
+										 
+					WHERE 1=1
+					  
+				) L
+					ON L.s_nb = O.S_NB
+		
+		where 1=1
+          AND O.DELETE_FLAG = 'N'
+        
+        <!-- 
+        <isNotEmpty property="srchCustNm">
+		  and ( O.CST_NM like concat('%',#srchCustNm#,'%') or O.CST_NM like concat('%',#srchCustNmKr#,'%') )
+        </isNotEmpty>
+        
+        <isNotEmpty property="srchCpnNm">
+		  and Q.CPN_NM like concat('%',#srchCpnNm#,'%')
+        </isNotEmpty>
+        
+        <isNotEmpty property="staffCusId">
+		  and exists(
+					select 1
+                      from base.bs_customer_manager K
+					 where K.staff_id in ($staffCusId$)
+                       and K.customer_id = O.S_NB
+                       and K.status = 'Y'
+					)
+        </isNotEmpty>
+        
+        <isNotEmpty property="isNotyet">
+          and not exists(
+					select 1
+                      from base.bs_customer_manager K
+                     where K.customer_id = O.S_NB
+					)
+		</isNotEmpty>
+		
+		<isNotEmpty property="cstType">
+			and (
+			  O.CATEGORY_PERSON_CD = #cstType#
+			<isEqual prepend="" property="isStock" compareValue="Y">		/* 고객구분이 증권사IB 이면 */ 
+			  or Q.category_business = '증권'								/* 고객구분이 증권사IB가 아니더라도, 고객의 회사가 증권사인 고객도 불러온다 */
+			</isEqual>
+			)
+		</isNotEmpty>
+	
+		<isNotEmpty property="isNew">
+		  and o.rg_dt like concat(date_format(now(), '%Y-%m-%d'), '%')
+          and o.rg_id like #usrId#
+		
+        </isNotEmpty>
+        
+         -->
+        
+        
+        <isNotEmpty property="srchCustNm">
+		  and ( O.CST_NM like concat('%',#srchCustNm#,'%') or O.CST_NM like concat('%',#srchCustNmKor#,'%') )
+        </isNotEmpty>
+        
+        <isNotEmpty property="srchCpnNm">
+		  and Q.CPN_NM like concat('%',#srchCpnNm#,'%')
+        </isNotEmpty>
+        
+        <isNotEmpty property="staffId">
+		  and exists(
+					select 1
+                      from base.bs_customer_manager K
+					 where K.staff_id in ($staffId$)
+                       and K.customer_id = O.S_NB
+                       and K.status = 'Y'
+					)
+        </isNotEmpty>
+        
+        <isNotEmpty property="isNotyet">
+          and not exists(
+					select 1
+                      from base.bs_customer_manager K
+                     where K.customer_id = O.S_NB
+                       and K.status = 'Y'
+					)
+		</isNotEmpty>
+		
+		<isNotEmpty property="isUnstaffCst">
+          and exists(
+					select 1
+                      from base.bs_customer_manager K
+                     where K.customer_id = O.S_NB
+                       and K.status = 'Y'
+                       and K.staff_id in (select s_nb from ib_staff where srt_cd = '10000' 
+                       <isNotEmpty property="division">
+                        	and division = #division#
+                       </isNotEmpty>
+                      )
+					)
+		</isNotEmpty>
+		
+		<isNotEmpty property="cstType">
+			and (
+			  O.CATEGORY_PERSON_CD = #cstType#
+			<isEqual prepend="" property="isStock" compareValue="Y">		<!-- 고객구분이 증권사IB 이면 -->
+			  or Q.category_business = '증권'								<!-- 고객구분이 증권사IB가 아니더라도, 고객의 회사가 증권사인 고객도 불러온다 -->
+			</isEqual>
+			)
+		</isNotEmpty>
+	
+		<isNotEmpty property="isNew">
+		  and o.rg_dt like concat(date_format(now(), '%Y-%m-%d'), '%')
+          and o.rg_id like #usrId#
+        </isNotEmpty>
+         
+		/* person.selectCustListCount */		
+	</select>
+	
+	<select id="person.selectCustListNewInCharge" parameterClass="HashMap" resultClass="HashMap">
+		SELECT
+				  O.S_NB						as sNb
+				, O.CST_NM						as cstNm
+				, O.CPN_ID						as cpnId
+				, ifnull(Q.CPN_NM, '')			as cpnNm
+				, Q.category_business			as cpnCate
+				
+                , O.CATEGORY_PERSON_CD			as custType
+                , ifnull((SELECT cd_nm	FROM IB_COMMON_CODE	WHERE MENU_CD = '00013' and dtail_cd = O.CATEGORY_PERSON_CD), '') as custTypeNm
+                
+				, O.EMAIL                     	as  email
+				, O.PHN_1                     	as  phn1
+				, O.PHN_2                     	as  phn2
+				, O.PHN_3                     	as  phn3
+				, O.POSITION                  	as  position
+			
+				<!-- ,ifnull((select cst_nm from ib_customer where s_nb = c.staff_id),'') as usrNm -->
+				
+				,ifnull((select usr_nm
+						   from ib_staff
+						  where s_nb = (select staff_id from base.bs_customer_manager where customer_id = o.s_nb and status = 'Y' limit 1)),'') as usrNm
+				
+				, (select max(lv_cd)
+					from ib_net_point
+					where 1=1
+					  AND ((S_NB_1ST = (SELECT CUS_ID FROM IB_STAFF WHERE S_NB = C.STAFF_ID) AND S_NB_2ND = O.S_NB) 
+					  		OR (S_NB_1ST = O.S_NB AND S_NB_2ND = (SELECT CUS_ID FROM IB_STAFF WHERE S_NB = C.STAFF_ID)))) AS lvCd
+					  
+				, (select count(1)
+					from ib_net_point
+					where 1=1					 
+					  and (s_nb_2nd = O.S_NB or s_nb_1st = O.S_NB)) as netCnt
+                
+                , ifnull(date_format((
+							select rg_dt
+							  from IB_OFFER
+							 where cst_id = O.S_NB
+							 order by rg_dt desc
+							 limit 1                   
+						 ), '%y-%m-%d'),'')  as lastDt
+                , (select cd_nm from ib_common_code where menu_cd = '00002' and dtail_cd = (
+																							select offer_cd
+																		                      from IB_OFFER
+																							 where cst_id = O.S_NB
+																							 order by rg_dt desc
+																		                     limit 1
+																						 ))  as lastType
+                , (select usr_nm from ib_staff where usr_id = (
+																select rg_id
+											                      from IB_OFFER
+																 where cst_id = O.S_NB
+																 order by rg_dt desc
+											                     limit 1                   
+															 ))  as lastNm
+                
+                 ,date_format(o.rg_dt, '%y-%m-%d') as rgDt
+                
+			FROM
+				IB_CUSTOMER O
+				
+				
+			JOIN
+				base.bs_customer_manager c on c.customer_id = o.s_nb
+			
+			LEFT JOIN
+				IB_COMPANY Q ON Q.CPN_ID = O.CPN_ID
+			
+		where 1=1
+		  and c.staff_id = (select s_nb from ib_staff where cus_id = #usrCusId#)
+		  and c.status = 'A'
+		  		         
+		/* person.selectCustListNewInCharge */		
+	</select>
+	
+	
+	<update id="person.updateCstManager" parameterClass="HashMap">
+		update base.bs_customer_manager
+		   set status = 'T'
+		   	  ,updated_by = #userSeq#
+		   	  ,update_date = now()
+		   	  
+		 where status = 'Y'
+		   and customer_id in ($cstList$)
+	</update>
+	<update id="person.updateAcceptCstManager" parameterClass="HashMap">
+		update base.bs_customer_manager
+		   set status = 'Y'
+		   	  ,updated_by = #userSeq#
+		   	  ,update_date = now()
+		   	  
+		where status = 'A'
+		  and customer_id in ($cstList$)
+		  and staff_id = (select s_nb from ib_staff where cus_id = #cusId#)
+	</update>
+	
+	
+	<select id="person.selectCustomer" parameterClass="String" resultClass="HashMap">
+		
+		SELECT
+			  A.S_NB                      	as  cstId
+			, A.CST_NM                    	as  cstNm
+			, A.CPN_ID                    	as  cpnId
+			, (SELECT CPN_NM FROM IB_COMPANY WHERE IB_COMPANY.CPN_ID = A.CPN_ID)      as  cpnNm
+			, A.EMAIL                     	as  email
+		<!-- , A.PHN_EXPOSURE              	as  phnExposure -->
+			, A.PHN_1                     	as  phn1
+			, A.PHN_2                     	as  phn2
+			, A.PHN_3                     	as  phn3
+			, A.POSITION                  	as  position
+		<!-- , A.LV_CD                     	as  lvCd -->
+		<!--, CASE WHEN CATEGORY_PERSON_CD = '00000' THEN '일반' WHEN CATEGORY_PERSON_CD = '00001' THEN '심사역' WHEN CATEGORY_PERSON_CD = '00002' THEN '운용인재' WHEN CATEGORY_PERSON_CD = '00003' THEN '심사역, 운용인재' END        as  categoryPSNm-->
+			, (select cd_nm from IB_COMMON_CODE where menu_cd = '00013' and dtail_cd = A.CATEGORY_PERSON_CD) as  categoryPSNm
+			, A.CATEGORY_PERSON_CD			as  categoryPSCd
+			, A.UP_ID						as upId
+			, A.RG_ID						as rgId
+			
+		FROM IB_CUSTOMER	A
+		WHERE 1=1
+		  AND A.S_NB = #cstId#
+		
+		/* person.selectPerson */
+	</select>
+	
+	
+	<select id="person.selectCustomerByName" parameterClass="HashMap" resultClass="HashMap">
+		
+		SELECT
+			  A.S_NB                      	as  cstId
+			, A.CST_NM                    	as  cstNm
+			, A.CPN_ID                    	as  cpnId
+			, (SELECT CPN_NM FROM IB_COMPANY WHERE IB_COMPANY.CPN_ID = A.CPN_ID)      as  cpnNm
+			, A.EMAIL                     	as  email
+		<!-- , A.PHN_EXPOSURE              	as  phnExposure -->
+			, A.PHN_1                     	as  phn1
+			, A.PHN_2                     	as  phn2
+			, A.PHN_3                     	as  phn3
+			, A.POSITION                  	as  position
+		<!-- , A.LV_CD                     	as  lvCd -->
+		<!--, CASE WHEN CATEGORY_PERSON_CD = '00000' THEN '일반' WHEN CATEGORY_PERSON_CD = '00001' THEN '심사역' WHEN CATEGORY_PERSON_CD = '00002' THEN '운용인재' WHEN CATEGORY_PERSON_CD = '00003' THEN '심사역, 운용인재' END        as  categoryPSNm-->
+			, (select cd_nm from IB_COMMON_CODE where menu_cd = '00013' and dtail_cd = A.CATEGORY_PERSON_CD) as  categoryPSNm
+			, A.CATEGORY_PERSON_CD			as  categoryPSCd
+			, A.UP_ID						as upId
+			, A.RG_ID						as rgId
+			
+		FROM IB_CUSTOMER	A
+		WHERE 1=1
+		  AND A.CST_NM = #cstNm#
+		  <!-- AND A.DELETE_FLAG = 'N' -->
+		
+		/* person.selectCustomerByName */
+	</select>
+	
+	
+	<!-- 
+	<update id="person.deleteCustomer" parameterClass="HashMap">
+		update ib_customer
+		   set delete_flag = 'Y'
+		   
+		   	  ,deleted_by = #userSeq#
+		   	  ,delete_date = now()
+		   	  
+		where s_nb in ($cstList$)
+		
+		/* person.deleteCustomer */
+	</update>
+	 -->
+	<update id="person.deleteCustomer" parameterClass="HashMap">
+		UPDATE BASE.BS_CUSTOMER_MANAGER
+		   SET STATUS = 'T'
+		   
+		   	  ,UPDATED_BY = #userSeq#
+		   	  ,UPDATE_DATE = now()
+		   	  
+		 WHERE CUSTOMER_ID in ($cstList$)
+		   AND STAFF_ID = (select s_nb from ib_staff where cus_id = #staffCusId#)
+	
+		/* person.deleteCustomer */
+	</update>
+	
+	<!-- -->
+	<select id="personDAO.selectStaffList" parameterClass="staffVO" resultClass="HashMap">
+			SELECT
+				  user.user_id               AS  sNb
+				, user.name                  AS  usrNm
+				, user.login_id              AS  usrId
+				, user.mobile_tel            AS  phn1
+				, user.company_tel           AS  phn2
+				, user.EMAIL                 AS  email
+				, LEFT(user.EMP_NO,9)        AS  sabun
+				,(SELECT team.deptNm FROM synergymain.IB_STAFF AS staff 
+				  LEFT OUTER JOIN erp.ERP_PER_DEPT AS team ON staff.team=team.deptSeq 
+				  WHERE staff.s_nb = user.user_id 
+				  ) AS  deptNm
+				
+		
+			FROM base.BS_USER_MASTER AS user 
+			LEFT OUTER JOIN base.bs_user_profile as up on user.user_id = up.user_id
+			LEFT OUTER JOIN synergymain.IB_STAFF as staff on staff.s_nb=user.user_id
+			WHERE  user.user_status ='W' AND up.car_work_yn='Y' AND staff.division='SYNERGY'
+			
+			ORDER BY sNb ASC
+	
+	</select>
+
+	<!-- user profile update -->
+	<update id="personDAO.updateUserProfile" parameterClass="staffVO" >
+			
+			UPDATE BASE.BS_USER_PROFILE
+				SET
+									  USER_LANG  =	'KOR'				
+<isNotEmpty property="analYn"> 		, ANAL_YN    =  #analYn#	</isNotEmpty>
+<isNotEmpty property="mezzL">		, MEZZ_L     =  #mezzL#		</isNotEmpty>
+<isNotEmpty property="mezzN">		, MEZZ_N 	 =  #mezzN#		</isNotEmpty>
+								
+				
+				WHERE USER_ID       =  #sNb#  
+	
+	</update>
+
+	
+</sqlMap>

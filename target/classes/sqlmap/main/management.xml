@@ -1,0 +1,681 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="management">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="managementVO" type="ib.personnel.service.ManagementVO"/>
+
+	<select id="managementDAO.selectStaff" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, USR_NM                   as  usrNm
+				, USR_ID                   as  usrId
+				, PHN_1                    as  phn1
+				, PHN_2                    as  phn2
+				, PHN_3                    as  phn3
+				, EMAIL                    as  email
+				, ENG_NM                   as  engNm
+				, OFFICE                   as  office
+				, POSITION                 as  position
+				, DATE(JOIN_DT)            as  joinDt
+				, DATE(FULLTIME_DT)        as  fulltimeDt
+				, DATE(RESIGN_DT)          as  resignDt
+				, DATE(BIRTH_DT)           as  birthDt
+				, DATE(MARRIED_DT)         as  marriedDt
+				, EMERGENCY_CALL           as  emergencyCall
+				, EMERGENCY_RELATION       as  emergencyRelation
+				, PASSPORT                 as  passport
+				, HOBBY                    as  hobby
+				, ABILLITY                 as  abillity
+				, ADDRESS                  as  address
+				, RELIGION                 as  religion
+				, BLOOD                    as  blood
+			FROM IB_STAFF 
+			WHERE USR_ID = #usrId#
+		]]>
+	</select>
+	
+	<update id="managementDAO.updateStaffInfo">
+		<![CDATA[
+			UPDATE IB_STAFF
+			SET 
+				  USR_NM                   =  #usrNm#
+				, PHN_1                    =  #phn1#
+				, ENG_NM                   =  #engNm#
+				, OFFICE                   =  #office#
+				, POSITION                 =  #position#
+				]]><isNotEmpty property="joinDt"><![CDATA[
+				, JOIN_DT                  =  #joinDt#
+				]]></isNotEmpty><isNotEmpty property="fulltimeDt"><![CDATA[
+				, FULLTIME_DT              =  #fulltimeDt#
+				]]></isNotEmpty><isNotEmpty property="resignDt"><![CDATA[
+				, RESIGN_DT                =  #resignDt#
+				]]></isNotEmpty><isNotEmpty property="birthDt"><![CDATA[
+				, BIRTH_DT                 =  #birthDt#
+				]]></isNotEmpty><![CDATA[
+				, MARRIED_DT               =  #marriedDt#
+				, EMERGENCY_CALL           =  #emergencyCall#
+				, EMERGENCY_RELATION       =  #emergencyRelation#
+				, PASSPORT                 =  #passport#
+				, HOBBY                    =  #hobby#
+				, ABILLITY                 =  #abillity#
+				, ADDRESS                  =  #address#
+				, RELIGION                 =  #religion#
+				, BLOOD                    =  #blood#
+				, UP_ID                    =  #usrId#
+				, UP_DT                    =  now()
+			WHERE S_NB       =  #sNb#
+		]]>
+	</update>
+
+	<select id="managementDAO.selectPmFamily" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, FAMILY_NM                as  familyNm
+				, RELATION                 as  relation
+				, DATE(BIRTH_DT)           as  familyBirthDt
+				, JOB                      as  job
+				, LIVE                     as  live
+			FROM PM_STAFF_FAMILY
+			WHERE STAFF_SNB = #staffSNb#
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmAcademic" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, ACADEMIC_NM              as  academicNm
+				, ACADEMIC                 as  academicGd
+				, MAJOR                    as  major
+				, JOIN_SCHOOL_DT           as  joinSchoolDt
+				, GRADUATE                 as  graduate
+			FROM PM_STAFF_ACADEMIC
+			WHERE STAFF_SNB = #staffSNb#
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmCareer" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, COMPANY_NM               as  companyNm
+				, DATE(JOIN_CPN_DT)        as  joinCpnDt
+				, DATE(RESIGN_CPN_DT)      as  resignCpnDt
+				, POSITION                 as  position
+				, JOB                      as  job
+			FROM PM_STAFF_CAREER
+			WHERE STAFF_SNB = #staffSNb#
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmLicense" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, LICENSE_NM               as  licenseNm
+				, ISSUE                    as  issue
+				, DATE(OBTAIN_DT)          as  obtainDt
+			FROM PM_STAFF_LICENSE
+			WHERE STAFF_SNB = #staffSNb#
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmInsideCareer" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, DATE(PROMOTION_DT)       as  promotionDt
+				, DIVISION                 as  division
+				, POSITION                 as  position
+			FROM PM_STAFF_INSIDE_CAREER
+			WHERE STAFF_SNB = #staffSNb#
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmJustice" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, DATE(JUSTICE_DT)         as  justiceDt
+				, REASON                   as  reason
+				, COMMENT                  as  comment
+			FROM PM_STAFF_JUSTICE
+			WHERE STAFF_SNB = #staffSNb#
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmSalary" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, DATE(VARIABLE_DT)        as  variableDt
+				, COMMENT                  as  comment
+				, PAY                      as  pay
+			FROM PM_STAFF_SALARY
+			WHERE STAFF_SNB = #staffSNb#
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmAssessment" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, YEAR(ASSESSMENT_DT)      as  assessmentDt
+				, ASSESSMENT_SCORE         as  assessmentScore
+				, PAY                      as  pay
+			FROM PM_STAFF_ASSESSMENT
+			WHERE STAFF_SNB = #staffSNb#
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmStock" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB 					as  sNb
+				, TURN 					as  turn
+				, FLAG 					as  flag
+				, DATE(TM_DT) 			as  stockDt
+				, QUANTITY 				as  quantity
+				, PRICE 				as  price
+			FROM PM_STAFF_STOCKOPTION
+			WHERE STAFF_SNB = #staffSNb#
+			  AND FLAG = '00001'
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmStockGet" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB 					as  sNb
+				, TURN 					as  turn
+				, FLAG 					as  flag
+				, DATE(TM_DT) 			as  stockDt
+				, QUANTITY 				as  quantity
+				, PRICE 				as  price
+			FROM PM_STAFF_STOCKOPTION
+			WHERE STAFF_SNB = #staffSNb#
+			  AND FLAG = '00002'
+		]]>
+	</select>
+
+	<select id="managementDAO.selectPmProposal" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  S_NB                     as  sNb
+				, DIVISION                 as  division
+				, CONTENTS                 as  contents
+			FROM PM_STAFF_PROPOSAL
+			WHERE STAFF_SNB = #staffSNb#
+			]]><isNotEmpty prepend="AND" property="division">
+				<![CDATA[	DIVISION = #division# 		]]>
+			</isNotEmpty><![CDATA[
+		]]>
+	</select>
+
+	
+	<insert id="managementDAO.insertFamilyInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_FAMILY 
+				  ( STAFF_SNB
+				  , FAMILY_NM
+				  , RELATION
+				  , BIRTH_DT
+				  , JOB
+				  , LIVE
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #familyNm#
+				  , #relation#
+				  , #familyBirthDt#
+				  , #job#
+				  , #live#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+	
+	<insert id="managementDAO.insertAcademicInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_ACADEMIC 
+				  ( STAFF_SNB
+				  , ACADEMIC_NM
+				  , JOIN_SCHOOL_DT
+				  , ACADEMIC
+				  , MAJOR
+				  , GRADUATE
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #academicNm#
+				  , #joinSchoolDt#
+				  , #academicGd#
+				  , #major#
+				  , #graduate#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+	
+	<insert id="managementDAO.insertCareerInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_CAREER 
+				  ( STAFF_SNB
+				  , COMPANY_NM
+				  , JOIN_CPN_DT
+				  , RESIGN_CPN_DT
+				  , POSITION
+				  , JOB
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #companyNm#
+				  , #joinCpnDt#
+				  , #resignCpnDt#
+				  , #position#
+				  , #job#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+	
+	<insert id="managementDAO.insertLicenseInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_LICENSE 
+				  ( STAFF_SNB
+				  , LICENSE_NM
+				  , ISSUE
+				  , OBTAIN_DT
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #licenseNm#
+				  , #issue#
+				  , #obtainDt#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+	
+	<insert id="managementDAO.insertInsideCareerInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_INSIDE_CAREER 
+				  ( STAFF_SNB
+				  , PROMOTION_DT
+				  , POSITION
+				  , DIVISION
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #promotionDt#
+				  , #position#
+				  , #division#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>	
+	
+	<insert id="managementDAO.insertJusticeInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_JUSTICE 
+				  ( STAFF_SNB
+				  , JUSTICE_DT
+				  , REASON
+				  , COMMENT
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #justiceDt#
+				  , #reason#
+				  , #comment#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+		
+	<insert id="managementDAO.insertSalaryInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_SALARY 
+				  ( STAFF_SNB
+				  , VARIABLE_DT
+				  , COMMENT
+				  , PAY
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #variableDt#
+				  , #comment#
+				  , #pay#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+		
+	<insert id="managementDAO.insertAssessmentInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_ASSESSMENT 
+				  ( STAFF_SNB
+				  , ASSESSMENT_DT
+				  , ASSESSMENT_SCORE
+				  , PAY
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #assessmentDt#
+				  , #assessmentScore#
+				  , #pay#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+		
+	<insert id="managementDAO.insertStockInfo">
+		<![CDATA[
+			INSERT INTO PM_STAFF_STOCKOPTION 
+				  ( STAFF_SNB
+				  , TURN
+				  , FLAG
+				  , TM_DT
+				  , QUANTITY
+				  , PRICE
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+				  , #turn#
+				  , #flag#
+		 		  , #stockDt#
+				  , #quantity#
+				  , #pay#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+		
+	<insert id="managementDAO.insertPmProposal">
+		<![CDATA[
+			INSERT INTO PM_STAFF_PROPOSAL 
+				  ( STAFF_SNB
+				  , DIVISION
+				  , CONTENTS
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( #staffSNb#
+		 		  , #division#
+				  , #contents#
+				  , now()
+				  , now()
+				  , #usrId#
+				  , #usrId# 
+				  )
+		]]>
+	</insert>
+	
+		
+	<update id="managementDAO.updateFamilyInfo">
+		<![CDATA[
+			UPDATE PM_STAFF_FAMILY
+			SET 
+				  FAMILY_NM     =  #familyNm#
+				, RELATION      =  #relation#
+				, BIRTH_DT      =  #familyBirthDt#
+				, JOB           =  #job#
+				, LIVE          =  #live#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<update id="managementDAO.updateAcademicInfo">
+		<![CDATA[
+			UPDATE PM_STAFF_ACADEMIC
+			SET 
+				  ACADEMIC_NM          =  #academicNm#
+				, ACADEMIC             =  #academicGd#
+				, MAJOR                =  #major#
+				, JOIN_SCHOOL_DT       =  #joinSchoolDt#
+				, GRADUATE             =  #graduate#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<update id="managementDAO.updateCareerInfo">
+<![CDATA[
+			UPDATE PM_STAFF_CAREER
+			SET 
+				  COMPANY_NM           =  #companyNm#
+				, JOIN_CPN_DT          =  #joinCpnDt#
+				, RESIGN_CPN_DT        =  #resignCpnDt#
+				, POSITION             =  #position#
+				, JOB                  =  #job#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+</update>
+	
+	<update id="managementDAO.updateLicenseInfo">
+		<![CDATA[
+			UPDATE PM_STAFF_LICENSE
+			SET 
+				  LICENSE_NM           =  #licenseNm#
+				, ISSUE                =  #issue#
+				, OBTAIN_DT            =  #obtainDt#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<update id="managementDAO.updateInsideCareerInfo">
+		<![CDATA[
+			UPDATE PM_STAFF_INSIDE_CAREER
+			SET 
+				  PROMOTION_DT         =  #promotionDt#
+				, DIVISION             =  #division#
+				, POSITION             =  #position#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<update id="managementDAO.updateJusticeInfo">
+		<![CDATA[
+			UPDATE PM_STAFF_JUSTICE
+			SET 
+				  JUSTICE_DT           =  #justiceDt#
+				, REASON               =  #reason#
+				, COMMENT              =  #comment#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<update id="managementDAO.updateSalaryInfo">
+		<![CDATA[
+			UPDATE PM_STAFF_SALARY
+			SET 
+				  VARIABLE_DT          =  #variableDt#
+				, COMMENT              =  #comment#
+				, PAY                  =  #pay#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<update id="managementDAO.updateAssessmentInfo">
+		<![CDATA[
+			UPDATE PM_STAFF_ASSESSMENT
+			SET 
+				  ASSESSMENT_DT        =  #assessmentDt#
+				, ASSESSMENT_SCORE     =  #assessmentScore#
+				, PAY                  =  #pay#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<update id="managementDAO.updateStockInfo">
+		<![CDATA[
+			UPDATE PM_STAFF_STOCKOPTION
+			SET 
+				  TM_DT         =  #stockDt#
+				, PRICE         =  #pay#
+				, QUANTITY      =  #quantity#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<update id="managementDAO.updatePmProposal">
+		<![CDATA[
+			UPDATE PM_STAFF_PROPOSAL
+			SET 
+				  CONTENTS             =  #contents#
+				, UP_ID         =  #usrId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+
+
+	<delete id="managementDAO.deleteFamilyInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_FAMILY 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deleteAcademicInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_ACADEMIC 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deleteCareerInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_CAREER 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deleteLicenseInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_LICENSE 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deleteInsideCareerInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_INSIDE_CAREER 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deleteJusticeInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_JUSTICE 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deleteSalaryInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_SALARY 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deleteAssessmentInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_ASSESSMENT 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deleteStockInfo">
+		<![CDATA[
+			DELETE FROM PM_STAFF_STOCKOPTION
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+	<delete id="managementDAO.deletePmProposal">
+		<![CDATA[
+			DELETE FROM PM_STAFF_PROPOSAL 
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+
+
+	
+	<select id="managementDAO.selectMaxSnb" parameterClass="managementVO" resultClass="managementVO">
+		<![CDATA[
+			SELECT
+				  MAX(S_NB)       as sNb
+			FROM IB_CUSTOMER
+		]]>
+	</select>
+
+</sqlMap>

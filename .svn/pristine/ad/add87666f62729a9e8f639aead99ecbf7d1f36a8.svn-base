@@ -1,0 +1,919 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="card">
+
+	<typeAlias  alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+	<typeAlias  alias="cardVO" type="ib.card.service.CardVO"/>
+
+	<!-- 지출 -->
+	<select id="cardDAO.selectCardUsedList" parameterClass="cardVO" resultClass="cardVO">
+		<![CDATA[
+			SELECT
+					 A.S_NB               AS sNb
+					,A.CST_S_NB           AS cstSnb
+					,B.USR_NM             as staffNm
+					,C.CST_NM             AS cstNm
+					,D.CPN_NM             as cstCpnNm
+					,C.POSITION           AS position
+					,(SELECT GROUP_CONCAT(DISTINCT CST_NM ORDER BY CST_NM DESC SEPARATOR ', ') FROM IB_CARD_USED_STAFF WHERE IB_CARD_USED_STAFF.CARD_S_NB = A.S_NB) as staff
+					,A.PLACE              AS place
+					,A.NOTE               AS note
+					,A.DV                 AS dv
+					,A.DV2                AS dv2
+					,A.FEEDBACK           AS feedback
+					,A.PRICE              AS price
+					,A.ETC_NUM            AS etcNum
+					,A.RG_DT              AS rgDt
+					,DATE(A.TM_DT)        AS tmDt
+					
+			    FROM IB_CARD_USED		A
+			  	LEFT JOIN IB_STAFF		B ON B.USR_ID = A.RG_ID
+			  	LEFT JOIN IB_CUSTOMER	C ON C.S_NB = A.CST_S_NB
+			  	LEFT JOIN IB_COMPANY	D ON D.CPN_ID = C.CPN_ID
+			  
+		]]>
+		<dynamic prepend="WHERE">
+            <isNotEmpty prepend="AND" property="choice_month">
+				<![CDATA[	A.TM_DT between CONCAT (#choice_year#, #choice_monthS#, '01') and CONCAT (#choice_year#, #choice_month#, '31235959') 		]]>
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="usrId">
+				<![CDATA[	A.RG_ID = #usrId#		]]>
+			</isNotEmpty>
+			
+			<isNotEmpty prepend="AND" property="sNb">
+				<![CDATA[	A.S_NB = #sNb#		]]>
+			</isNotEmpty>
+		
+			
+		</dynamic>
+		<dynamic prepend="ORDER BY">
+            <isEqual prepend="" property="sorting" compareValue="" >
+				<![CDATA[	A.TM_DT DESC , A.S_NB DESC	]]>
+			</isEqual>
+            <isEqual prepend="" property="sorting" compareValue="1" >
+				<![CDATA[	staffNm ASC 		]]>
+			</isEqual>
+            <isEqual prepend="" property="sorting" compareValue="2" >
+				<![CDATA[	cstNm ASC 		]]>
+			</isEqual>
+		</dynamic> 
+	</select>
+
+	<insert id="cardDAO.insertCardUsedList">
+		<![CDATA[
+			INSERT INTO IB_CARD_USED 
+				  ( 
+				    CST_S_NB
+				  , PLACE
+				  , NOTE
+				  , DV
+				  , DV2
+				  , PRICE
+				  , ETC_NUM
+				  , TM_DT
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( 
+				    #cstSnb#
+				  , #place#
+				  , #note#
+				  , #dv#
+				  , #dv2#
+				  , #price#
+				  , #etcNum#
+				  , #tmDt#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+	</insert>
+
+	<update id="cardDAO.updateCardUsedList">
+		
+			UPDATE IB_CARD_USED 
+			
+			   SET CST_S_NB = #cstSnb#
+			      ,PLACE    = #place# 
+			      ,NOTE     = #note#  
+			      ,DV       = #dv#    
+			      ,DV2      = #dv2#   
+			      ,PRICE    = #price# 
+			      <!-- ,ETC_NUM  = #etcNum# -->
+			      ,TM_DT    = #tmDt#  
+			      ,RG_DT    = now()   
+			      ,UP_DT    = now()   
+			      ,RG_ID    = #rgId#  
+			      ,UP_ID    = #rgId#  
+			   
+			 WHERE S_NB	= #sNb#				
+		/* cardDAO.updateCardUsedList */
+	</update>
+
+
+	<select id="cardDAO.selectMaxSNb" parameterClass="cardVO" resultClass="cardVO">
+		<![CDATA[
+			SELECT
+			    max(S_NB+0) as sNb
+			FROM
+			    IB_CARD_USED
+		]]>
+	</select>
+
+	<insert id="cardDAO.insertCardUsedStaffList">
+		<![CDATA[
+			INSERT INTO IB_CARD_USED_STAFF 
+				  ( 
+				    CARD_S_NB
+				  , CST_NM
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( 
+				    #sNb#
+				  , #memoSndName#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+	</insert>
+	
+	<delete id="cardDAO.deleteCardUsedStaffList">
+		<![CDATA[
+			DELETE FROM IB_CARD_USED_STAFF
+			 WHERE CARD_S_NB = #sNb#
+		]]>
+	</delete>
+	
+	
+	<update id="cardDAO.updateCardFeedback">
+		<![CDATA[
+			UPDATE IB_CARD_USED
+			SET 
+				  FEEDBACK      =  #feedback#
+				, UP_ID         =  #rgId#
+				, UP_DT         =  now()
+			WHERE S_NB = #sNb#
+		]]>
+	</update>
+	
+	<delete id="cardDAO.deleteCardUsed">
+		<![CDATA[
+			DELETE FROM IB_CARD_USED
+			 WHERE S_NB      =  #sNb#
+		]]>
+	</delete>
+	
+	<!-- 추가 및 변경  20160907 jy --> 
+	
+	<!-- 해당 지출건 유저리스트 (퇴근시간 포함) -->
+	<select id="card.selectCardUserList" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT  
+		
+				
+				 card.s_nb 			as sNb
+				,card.card_s_nb 	as cardSnb
+				,card.cst_nm		as cstNm	
+				,staff.sabun		as sabun
+				,staff.s_nb			as userId
+				,staff.usr_nm		as userName
+				,(SELECT positionNm FROM erp.erp_per_position where positionCd = staff.position) as position
+				,IFNULL((SELECT RIGHT(outTime,8) 
+				  		 FROM  erp.erp_workouttime
+				  		 WHERE persabun=staff.sabun AND LEFT(outTime,10)=#useDate# ORDER BY outTime DESC LIMIT 1),'') as leaveWorkTime
+			FROM synergymain.ib_card_used_staff as card 
+ 			LEFT OUTER JOIN synergymain.ib_staff as staff ON card.cst_nm =staff.usr_nm 
+ 			
+		]]>
+		<dynamic prepend="WHERE">
+            <isNotEmpty prepend="AND" property="cardSnb">
+				<![CDATA[	card.card_s_nb = #cardSnb#	]]>
+			</isNotEmpty>
+		</dynamic>
+		ORDER BY card.s_nb asc;
+	</select>
+	
+	
+	<!-- 지출 등록 -->
+	<insert id="card.insertCardUse">
+			INSERT INTO IB_CARD_USED 
+				  ( 
+				    cst_s_nb
+				  , place
+				  , note
+				  , dv
+				  , dv2
+				  , price
+				  <!-- , etc_num -->
+				  <!-- , extra_name -->
+				  , sch_seq
+				  , from_loc
+				  , to_loc
+				  , car_id
+				  , progress
+				  , status
+				  , tm_dt
+				  , year
+				  , month
+				  , rg_dt
+				  , up_dt
+				  , rg_id
+				  , up_id 
+		 ) VALUES ( 
+				    #cstSnb#
+				  , #place#
+				  , #note#
+				  , #dv#
+				  , #dv2#
+				  , #price#
+				  <!-- , #etcNum# -->
+				  <!-- , #extraName# -->
+				  , #schSeq#
+				  , #fromLoc#
+				  , #toLoc#
+				  , #carId#
+				  , #progress#
+				  , #status#
+				  , #tmDt#
+				  , #year#
+				  , #month#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		<selectKey resultClass="int" type="post" keyProperty="s_nb">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		
+		/* card.insertCardUse */
+	</insert>
+	
+	<!-- 지출 수정 -->
+	<update id="card.updateCardUse">
+			UPDATE IB_CARD_USED 
+			SET
+				  cst_s_nb	 = #cstSnb#
+				, place		 = #place# 		
+				, note		 = #note#
+				, dv 		 = #dv#
+				, dv2 		 = #dv2#
+				, price 	 = #price#
+				<!-- , etc_num 	 = #etcNum# -->
+				<!-- , extra_name = #extraName# -->
+				, sch_seq 	 = #schSeq#
+				, from_loc 	 = #fromLoc#
+				, to_loc 	 = #toLoc#
+				, car_id 	 = #carId#
+				, progress 	 = #progress#
+				, status 	 = #status#
+				, tm_dt 	 = #tmDt#
+				, year		 = #year# 	
+				, month		 = #month#
+				, up_dt 	 = now()
+				, up_id  	 = #rgId#
+			WHERE S_NB	= #sNb#	
+			
+			/* card.updateCardUse */
+	</update>
+	
+	<!-- 지출 참가자 등록 -->
+	<insert id="card.insertCardUsedStaffListBysabun">
+		<![CDATA[
+			INSERT INTO IB_CARD_USED_STAFF 
+				  ( 
+				    CARD_S_NB
+				  , CST_NM
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( 
+				    #sNb#
+				  , (select usr_nm from ib_staff where sabun = #cstSabun# )
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+		]]>
+		<selectKey resultClass="int" type="post" keyProperty="s_nb">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	
+	<!-- 지출 회사/고객 등록(IB_CARD_USED_CUSTOMER) -->
+	<insert id="card.insertCardUsedCustomer" parameterClass="HashMap">		
+		INSERT INTO IB_CARD_USED_CUSTOMER 
+				  ( 
+				    CARD_S_NB
+				  , CST_SNB
+				  , RG_DT
+				  , UP_DT
+				  , RG_ID
+				  , UP_ID 
+		 ) VALUES ( 
+				    #sNb#
+				  , #cstSnb#
+				  , now()
+				  , now()
+				  , #rgId#
+				  , #rgId# 
+				  )
+			<selectKey resultClass="int" type="post">
+				SELECT LAST_INSERT_ID()
+			</selectKey>
+			
+		/* card.insertCardUsedCustomer */
+	</insert>
+	
+	
+	<!-- 지출 회사/고객 조회 -->
+	<select id="card.selectCardUsedCustomerList" parameterClass="HashMap" resultClass="HashMap">
+			SELECT card.s_nb 			    AS sNb			
+				, company.cpn_nm 			AS cpnNm
+				, customer.cst_nm			AS cstNm
+                , usedCustomer.card_s_nb	AS cardSNb
+				, usedCustomer.cst_snb		AS cstSnb
+                , usedCustomer.rg_dt		AS rgDt
+			    , usedCustomer.up_dt		AS upDt
+			    , usedCustomer.rg_id		AS rgId
+			    , usedCustomer.up_id		AS upId
+             FROM IB_CARD_USED card, IB_CARD_USED_CUSTOMER usedCustomer 
+                , IB_COMPANY company, IB_CUSTOMER customer 
+             WHERE card.s_nb = usedCustomer.card_s_nb
+             AND   customer.s_nb = usedCustomer.cst_snb
+             AND   company.cpn_id = customer.cpn_id            
+             AND   usedCustomer.CARD_S_NB = #sNb#
+
+		/* card.selectCardUsedCustomerList */
+	</select>
+	
+	
+	<!-- 지출 회사/고객 삭제(IB_CARD_USED_CUSTOMER) -->
+	<delete id="cardDAO.deleteCardUsedCustomerList">
+		DELETE FROM IB_CARD_USED_CUSTOMER
+		 WHERE CARD_S_NB = #sNb#
+		 
+		/* cardDAO.deleteCardUsedCustomerList */		 
+	</delete>
+	
+	
+	
+	
+	
+	<!-- 소모품 등록 -->
+	<insert id="card.insertCardMro">
+		<![CDATA[
+			INSERT INTO base.bs_card_mro
+				  ( 
+				    card_id
+				  , mro_code
+				  , mro_name
+				  , qty
+				  , price
+			) VALUES ( 
+				    #sNb#
+				  , #mroCode#
+				  , #mroName#
+				  , #qty#
+				  , #price# 
+				  )
+		]]>
+		<selectKey resultClass="int" type="post" keyProperty="mro_id">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<!-- 카드 리스트 가져오기 -->
+	<select id="card.selectCardList" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT
+					 card.s_nb               AS sNb
+					,staff.sabun			 AS sabun
+					,card.cst_s_nb           AS cstSnb
+					,staff.usr_nm            AS staffNm
+					,customer.cst_nm         AS cstNm
+					,company.cpn_nm          AS cstCpnNm
+					,company.cpn_id          AS cstCpnId  
+					,customer.position       AS position
+					,(SELECT GROUP_CONCAT(DISTINCT cst_nm ORDER BY cst_nm DESC SEPARATOR ', ') FROM IB_CARD_USED_STAFF WHERE card_s_nb = card.s_nb) as staff
+					,IFNULL((SELECT CONCAT (ScheEMonth,'/',ScheEDay,' ',ScheETimeAMPM,' ',ScheETime,' ',ScheTitle)
+					  		 FROM erp.erp_schedule where card.sch_seq = scheSeq),'') AS scheTitle
+					,card.place              AS place
+					,card.note               AS note
+					,card.dv                 AS dv
+					,card.dv2                AS dv2
+					,card.feedback           AS feedback
+					,card.price              AS price
+					,IFNULL(card.etc_num,'0')            AS etcNum
+					,IFNULL(card.extra_name,'')AS extraName
+					,card.rg_dt              AS rgDt
+					,DATE_FORMAT(card.tm_dt, '%Y-%m-%d') AS tmDt
+					,IFNULL(card.sch_seq,'0')            AS schSeq
+					,IFNULL(card.from_loc,'')            AS fromLoc
+					,IFNULL(card.to_loc,'')              AS toLoc
+					,IFNULL(card.car_id,'0')             AS carId
+					,card.progress           AS progress
+					,card.status             AS status
+					
+					,IF(EXISTS (SELECT 1 FROM IB_CARD_CORP_USED WHERE card_snb = card.s_nb),1,0) AS corpYn
+					
+					
+			 FROM  IB_CARD_USED card
+			  	LEFT OUTER JOIN IB_STAFF staff ON staff.usr_id = card.rg_id
+			  	LEFT OUTER JOIN IB_CUSTOMER customer ON customer.s_nb = card.cst_s_nb
+			  	LEFT OUTER JOIN IB_COMPANY company ON company.cpn_id = customer.cpn_id
+			  
+		]]>
+		<dynamic prepend="WHERE">
+			<isEmpty property="sNb">													<!-- 리스트일때 -->
+            	<isNotEmpty prepend="AND" property="choiceDate">						<!-- 달 검색 -->
+					LEFT(card.tm_dt,7) = #choiceDate# 		
+				</isNotEmpty>
+				<isEmpty prepend="AND" property="choiceDate">							<!-- 기간검색 -->
+					card.tm_dt BETWEEN #startDate# AND #endDate#
+				</isEmpty>
+			</isEmpty>
+			
+			<isNotEqual prepend="AND" property="usrIdArrCount" compareValue="0">	<!--LEFT 에서 선택한 유저 리스트 Array -->
+				<iterate prepend="card.rg_id IN " property="usrIdArr" open="(" close=")" conjunction=",">
+					<![CDATA[	#usrIdArr[]#]]>
+				</iterate>
+			</isNotEqual>
+			
+			<isNotEmpty prepend="AND" property="sNb">
+				card.s_nb = #sNb#	
+			</isNotEmpty>
+			
+			<isNotEmpty prepend="AND" property="dv2">		<!-- 기존 데이터 때문에 하드코딩 -->
+				CASE #dv2# WHEN 1000 THEN dv in (10,20,30,40,50)
+				WHEN 2000 THEN dv in (55,60,70,80,90)
+				WHEN 3000 THEN dv = 100
+				WHEN 4000 THEN dv in (110,120,130,140,150)
+				WHEN 5000 THEN dv = 160
+				WHEN 6000 THEN dv = 170
+				END
+			</isNotEmpty>
+			
+			<isNotEmpty prepend="AND" property="overPrice">
+				card.price &gt; #overPrice#
+			</isNotEmpty>
+			
+		</dynamic>
+
+		<dynamic prepend="ORDER BY">
+            <isEqual prepend="" property="sorting" compareValue="" >
+				<![CDATA[	card.tm_dt DESC, card.s_nb DESC		]]>
+			</isEqual>
+            <isEqual prepend="" property="sorting" compareValue="1" >
+				<![CDATA[	staffNm ASC 		]]>
+			</isEqual>
+            <isEqual prepend="" property="sorting" compareValue="2" >
+				<![CDATA[	cstNm ASC 		]]>
+			</isEqual>
+		</dynamic>
+		
+		/* card.selectCardList */
+	</select>
+	
+	<!-- 소모품 리스트 -->
+	<select id="card.selectCardMro" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT  
+				  	mro_id 		AS mroId
+				  , card_id		AS cardId
+				  , mro_code	AS mroCode
+				  , mro_name	AS mroName
+				  , qty
+				  , price
+			FROM  base.bs_card_mro
+		]]>
+		<dynamic prepend="WHERE">
+            <isNotEmpty prepend="AND" property="cardSnb">
+            	card_id = #cardSnb#
+            </isNotEmpty>
+        </dynamic>
+        ORDER BY mro_id asc    
+	</select>
+	
+	<!-- 소모품 리스트 삭제 -->
+	<delete id="card.delectCardMro">
+		<![CDATA[
+			DELETE FROM base.bs_card_mro
+			 WHERE card_id = #sNb#
+		]]>
+	</delete>
+	
+	<!--최초 입력 년도 리스트 -->
+	<select id="card.selectMinYear" parameterClass="HashMap" resultClass="java.lang.String">
+		<![CDATA[
+			SELECT MIN(distinct year) AS year FROM synergymain.ib_card_used;
+		]]>
+	</select>
+	
+	<!--통계 dv-->
+	<select id="card.selectDvCardStatistics" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT 
+					 card.month		 AS month
+					,card.dv		 AS dv
+					,card.dv2		 AS dv2
+					,sum(card.price) AS sum
+					,dept.deptSeq	 AS deptSeq
+					,staff.usr_nm	 AS usrNm
+			
+			FROM synergymain.ib_card_used AS card
+			LEFT OUTER JOIN synergymain.ib_staff AS staff on card.rg_id = staff.usr_id
+			LEFT OUTER JOIN erp.erp_per_dept AS dept on staff.team = deptSeq
+		]]>
+		<dynamic prepend="WHERE">
+            <isNotEmpty prepend="AND" property="choiceYear">
+            	year = #choiceYear#
+            </isNotEmpty>
+	        <isEqual property="searchType" compareValue="team" >
+					AND dept.deptSeq = #search#
+			</isEqual>
+			<isEqual property="searchType" compareValue="person" >
+					AND card.rg_id = #search#
+			</isEqual>
+		</dynamic>
+		GROUP BY dv,month 
+        ORDER BY CAST(dv as UNSIGNED),month ASC
+	</select>
+	
+	<!--통계 dv2-->
+	<select id="card.selectDv2CardStatistics" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT 
+					 month
+					,dv2
+					,sum(price) 	AS sum
+					,dept.deptSeq	AS deptSeq
+					,staff.usr_nm	AS usrNm
+			
+			FROM synergymain.ib_card_used AS card
+			LEFT OUTER JOIN synergymain.ib_staff AS staff on card.rg_id = staff.usr_id
+			LEFT OUTER JOIN erp.erp_per_dept AS dept on staff.team = deptSeq
+			
+		]]>
+		<dynamic prepend="WHERE">
+            <isNotEmpty prepend="AND" property="choiceYear">
+            	year = #choiceYear#
+            </isNotEmpty>
+       
+        	<isEqual property="searchType" compareValue="team" >
+				AND dept.deptSeq = #search#
+			</isEqual>
+			<isEqual property="searchType" compareValue="person" >
+				AND card.rg_id = #search#
+			</isEqual>
+		 </dynamic>
+        
+        GROUP BY dv2,month 
+        ORDER BY CAST(dv2 as UNSIGNED),month ASC
+	 </select>
+	 
+	 <!--월별 통계-->
+	<select id="card.selectMonthCardStatistics" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT 
+					 month
+					,sum(price) as sum
+					,dept.deptSeq	 AS deptSeq
+					,staff.usr_nm	 AS usrNm
+			
+			FROM synergymain.ib_card_used AS card
+			LEFT OUTER JOIN synergymain.ib_staff AS staff on card.rg_id = staff.usr_id
+			LEFT OUTER JOIN erp.erp_per_dept AS dept on staff.team = deptSeq
+		]]>
+		<dynamic prepend="WHERE">
+            <isNotEmpty prepend="AND" property="choiceYear">
+            	year = #choiceYear#
+            </isNotEmpty>
+            <isEqual property="searchType" compareValue="team" >
+				AND dept.deptSeq = #search#
+			</isEqual>
+			<isEqual property="searchType" compareValue="person" >
+				AND card.rg_id = #search#
+			</isEqual>
+        </dynamic>
+        
+        GROUP BY month 
+        ORDER BY month ASC
+	 </select>
+
+	<!-- 바로빌 법인카드 연동 -->
+	
+	<!-- 바로빌 법인카드 사용내역 등록 -->
+	<insert id="card.insertCardCorpUsed">
+		<![CDATA[
+			INSERT IGNORE INTO synergymain.ib_card_corp_used
+				  ( 				    
+				  CARD_CORP_ID
+				  ,CORP_NUM
+				  , CARD_NUM				  
+				  , YEAR
+				  , MONTH
+				  , TM_DT
+				  , APPROVAL_YN
+				  , APPROVAL_TYPE
+				  , APPROVAL_COST
+				  , APPROVAL_NUM
+				  , PLACE_NUM
+				  , PLACE_NAME				  
+				  , STATUS_FLAG
+				  , REG_DATE
+			) VALUES (
+					#cardCorpId#				    
+				  , #corpNum#
+				  , #cardNum#
+				  , #year#
+				  , #month#
+				  , #tmDt#
+				  , #approvalYn#
+				  , #approvalType#
+				  , #approvalCost#
+				  , #approvalNum#
+				  , #placeNum#
+				  , #placeName#				  
+				  , #statusFlag#
+				  , now() 
+				  )
+		]]>
+		<selectKey resultClass="int" type="post" keyProperty="s_nb">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<insert id="card.insertCardCorpLog">
+		<![CDATA[
+			INSERT IGNORE INTO synergymain.ib_card_corp_log
+				  ( 				    
+				  	CARD_NUM				  
+				  , USED_COUNT				  
+				  , SUCCESS_FLAG
+				  , ERROR_CODE
+				  , REG_DATE				  
+			) VALUES (
+					#cardNum#
+				  , #usedCount#
+				  , #successFlag#
+				  , #errorCode#				   
+				  , now()
+				  )
+		]]>
+		<selectKey resultClass="int" type="post" keyProperty="s_nb">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<!-- 법인카드 정보 리스트 가져오기 -->
+	<select id="card.selectCardCorpInfoList" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT
+					 S_NB					AS sNb
+					,CARD_NUM				AS cardNum
+					,CARD_COMPANY			AS cardCompany
+					,CORP_NUM				AS corpNum
+					,CERT_KEY				AS certKey
+					,MASTER_ID				AS masterId
+					,LOGIN_ID				AS loginId
+					,LINK_FLAG				AS linkFlag					
+			 FROM  IB_CARD_CORP_INFO 
+			  	WHERE LINK_FLAG='Y'
+			  
+		]]>		
+	</select>
+	
+	<!-- 법인카드 정보 리스트 가져오기 -->
+	<select id="card.selectCardCorpStatusCode" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT					 
+					 STATUS_MSG				AS statusMsg
+					,STATUS_CODE			AS statusCode														
+			 FROM  IB_CARD_CORP_STATUS_CODE
+			  	WHERE DEL_FLAG='N'			  
+		]]>		
+	</select>
+	
+	
+	<!-- 법인회사 리스트 가져오기 -->
+	<select id="card.selectCorpInfoList" resultClass="HashMap">
+		<![CDATA[
+			SELECT
+					 CORP_NUM				AS corpNum
+					,CORP_NAME				AS corpName										
+			 FROM  IB_CARD_CORP_INFO
+			 GROUP BY CORP_NUM
+		]]>		
+	</select>
+	
+	<!-- 법인카드 사용내역 리스트 가져오기 -->
+	<select id="card.selectCardCorpUsedList" parameterClass="HashMap" resultClass="HashMap">
+		<![CDATA[
+			SELECT
+					 S_NB					AS	sNb
+					,CARD_CORP_ID			AS	cardCorpId
+					,CORP_NUM				AS	corpNum
+					,CORP_NAME				AS	corpName
+					,CARD_NUM				AS	cardNum
+					,YEAR					AS	year
+					,MONTH					AS	month
+					,DATE_FORMAT(TM_DT, '%Y-%m-%d %H:%i:%s')			AS	tmDt
+					,DATE_FORMAT(TM_DT, '%Y-%m-%d')						AS	tmDate
+					,USED_DATE				AS	usedDate
+					,USED_TIME				AS	usedTime
+					,APPROVAL_YN			AS	approvalYn
+					,APPROVAL_COST			AS	approvalCost
+					,PLACE_NUM				AS	placeNum
+					,PLACE_NAME				AS	placeName
+					,SABUN					AS	sabun
+					,USR_ID					AS	usrId
+					,USR_NM					AS	usrNm
+					,STATUS_FLAG			AS	statusFlag
+					,REG_LATE_COUNT			AS	regLateCount
+					,REG_LATE_FLAG			AS	regLateFlag				
+			 FROM  IB_CARD_CORP_USED_V cardCorp
+			 WHERE DEL_FLAG='N'	  
+		]]>
+			<isNotEmpty prepend="AND" property="statusFlag">
+				STATUS_FLAG	= #statusFlag#	
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="approvalYn">
+				APPROVAL_YN	= #approvalYn#
+			</isNotEmpty>
+			<isEmpty prepend="AND" property="approvalYn">
+				APPROVAL_YN	= 'Y'
+			</isEmpty>
+			<isNotEmpty property="corpNum">
+				<isNotEqual prepend="AND" property="corpNum" compareValue="0">	<!-- 법인별 검색 : 0은 전체-->
+					CORP_NUM = #corpNum#
+				</isNotEqual>
+			</isNotEmpty>	
+			<isNotEqual prepend="AND" property="usrIdArrCount" compareValue="0">	<!--LEFT 에서 선택한 유저 리스트 Array -->
+				<iterate prepend="USR_ID IN " property="usrIdArr" open="(" close=")" conjunction=",">
+					<![CDATA[	#usrIdArr[]#]]>
+				</iterate>
+			</isNotEqual>
+		
+		ORDER BY TM_DT DESC
+		/* card.selectCardCorpUsedList */			
+	</select>
+	
+	
+	<update id="card.updateCardCorpUse">
+		<![CDATA[
+			UPDATE IB_CARD_CORP_USED 
+			
+			   SET CARD_SNB = #sNb#	
+			   ,STATUS_FLAG = 'Y'		      
+			   
+			 WHERE S_NB	= #cardCorpSnb#				
+		]]>
+	</update>	
+	
+	<update id="card.deleteCardCorpUsed">
+		<![CDATA[
+			UPDATE IB_CARD_CORP_USED 			
+			   SET DEL_FLAG = 'Y'		
+			 WHERE S_NB	= #cardCorpSnb#				
+		]]>
+	</update>	
+	
+	
+	<!-- 일정 조회 (법인카드 사용내역 지출 등록)-->
+	<select id="card.selectScheList" parameterClass="HashMap" resultClass="HashMap">		  
+		SELECT 
+			DISTINCT scheEDate 							AS ScheEDate
+			,sche.scheSeq 								AS ScheSeq
+			<!-- ,CONCAT (ScheEMonth,'/',ScheEDay,' ',ScheETimeAMPM,' ',ScheETime,' ',ScheTitle) AS ScheTitle -->
+			,CONCAT (ScheSMonth,'/',ScheSDay,' ',ScheSTimeAMPM,' ',ScheSTime,' ',ScheTitle) AS ScheTitle
+			,scheEDate 									AS ScheEDate
+			,ScheETimeAMPM 								AS ScheETimeAMPM
+			,scheETime 									AS ScheETime
+			,scheEMonth 								AS ScheEMonth
+			,scheEDay 									AS ScheEDay
+			,scheTitle 									AS orgScheTitle
+		 	,IF(length(IFNULL(carNum,0)) &lt; 4, 0, 1) 	AS carYn
+		 	,IFNULL(company,'') 						AS company
+			,IFNULL((select cpn_nm from ib_company where s_nb = company_id),'') AS companyNm
+			,IFNULL(customer_id,'') 					AS customerId
+			,IFNULL(customer,'') 						AS customer
+			
+		 FROM ERP.ERP_SCHEDULE 					AS sche
+		 LEFT OUTER JOIN ERP.ERP_SCHEDULEENTRY 	AS entry ON entry.scheSeq = sche.scheSeq 
+		WHERE 1=1
+		
+		<isEqual prepend="AND" property="scheduleType" compareValue="100" >		<!-- 여비교통비 100 -->
+			scheEDate BETWEEN #date# AND DATE_ADD(#date#, INTERVAL 30 DAY)		<!-- 한달 미래 일정까지 -->
+		</isEqual>
+		<isNotEqual prepend="AND" property="scheduleType" compareValue="100" >	<!-- 여비교통비 100 -->
+			<!-- 영업관련(10~50)이면 하루전 일정도 읽어오도록 확장 -->
+			IF(#scheduleType# IN ('10','20','30','40','50'), scheEDate BETWEEN DATE_ADD(#date#, INTERVAL -1 DAY) AND #date#, scheEDate = #date#)
+		</isNotEqual>
+		  
+		<isNotEmpty prepend="AND" property="scheduleType">
+			CASE #scheduleType#
+				WHEN '20' THEN scheType = 'Mt_dinner'
+				WHEN '30' THEN scheType = 'Mt_dinner'
+				WHEN '10' THEN scheType = 'Mt_lunch'
+			    ELSE scheType NOT IN ('Holiday','Private','Notice','Invest','Mt_inside')
+		    END
+		</isNotEmpty>
+		
+		  AND ((sche.perSabun = #sabun# AND sche.delflag = 'N') 
+		     	OR 
+		       (entry.perSabun = #sabun# AND entry.delflag = 'N')) 
+		
+		ORDER BY scheEDate ASC
+		
+	/* card.selectScheList */
+	</select>
+	
+	<!-- 지난주까지 미입력된 법인카드 사용내역 조회 -->
+	<select id="card.getCardCorpUnregList" parameterClass="String" resultClass="HashMap">
+		SELECT 
+			USED.S_NB snb, 
+			count(STATUS.S_NB) cnt ,
+			INFO.MASTER_ID usrid,
+            STAFF.PHN_1 cellphone,
+            STAFF.SABUN 	sabun
+		FROM IB_CARD_CORP_USED USED
+		
+		LEFT JOIN 
+		IB_CARD_CORP_USED_STATUS STATUS
+		ON 
+			USED.S_NB=STATUS.CARD_CORP_SNB AND 
+			STATUS.EVENT_TYPE='unreg' AND
+			STATUS.DEL_FLAG='N'
+			
+		LEFT JOIN
+        IB_CARD_CORP_INFO INFO
+        ON 
+			USED.CARD_NUM = INFO.CARD_NUM
+		LEFT JOIN
+        IB_STAFF STAFF
+        ON
+			INFO.MASTER_ID=STAFF.USR_ID
+			
+		WHERE STATUS_FLAG='N'
+		  AND APPROVAL_YN='Y'
+		  AND USED.DEL_FLAG='N'
+		  AND WEEK(tm_dt, 1) <![CDATA[<]]> WEEK(CURDATE(), 1)
+		  
+		GROUP BY USED.S_NB 
+		ORDER BY STATUS.S_NB DESC
+	</select>
+	
+	<!-- 입력 기한이 지난 법인카드 입력지연 데이타 추가 -->
+	<insert id="card.insertCardCorpUsedStatus"  parameterClass="HashMap">
+		INSERT INTO IB_CARD_CORP_USED_STATUS (CARD_CORP_SNB, EVENT_TYPE, EVENT_DATE, EVENT_TIME) 
+		VALUES(#snb#, 'unreg', curdate(), curtime())
+		ON DUPLICATE KEY UPDATE 
+		EVENT_TIME=curtime()
+	</insert>
+	
+	<!-- 입력 기한 초과로 인한 패널티 적용 -->
+	<update id="card.updateCardCorpRegLateFlag"  parameterClass="HashMap">
+		UPDATE IB_CARD_CORP_USED SET
+			REG_LATE_FLAG='Y'
+		WHERE 
+			S_NB=#snb#		
+	</update>
+	
+	<!-- 법인카드 문자메시지 전송 내역 등록 -->
+	<insert id="card.insertCardCorpSmsLog"  parameterClass="HashMap">
+		INSERT INTO IB_CARD_CORP_SMSLOG(TITLE, SMS_TYPE, SEND_NUMBER, RECV_NUMBER, USR_ID, CONTENT, SEND_DATE, REG_DATETIME)
+		VALUES('법인카드', 3, #sendNumber#, #recvNumber#, #usrId#, #smsContent#, CURDATE(), NOW())	
+	</insert>
+		
+	<!-- 법인카드 문자메시지 당일 전송 내역 존재 여부 조회 -->	
+	<select id="card.getCardCorpSmsLog" resultClass="HashMap">
+		SELECT COUNT(*) sendCount FROM IB_CARD_CORP_SMSLOG 
+		WHERE 
+			RECV_NUMBER=#recvNumber# AND 
+			SEND_DATE=CURDATE() AND
+			DEL_FLAG='N'			
+	</select>
+	
+	<!-- 입력 날짜의 휴일정보 조회 -->	
+	<select id="card.getHolidayStatus" resultClass="HashMap">
+		SELECT CAL_DATE, holiflag FROM CALENDAR 
+		WHERE 
+			CAL_DATE=#inputDate#				
+	</select>
+	
+	
+	
+	
+</sqlMap>

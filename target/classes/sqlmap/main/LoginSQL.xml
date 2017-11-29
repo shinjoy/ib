@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="LoginUsr">
+
+	<typeAlias  alias="loginVO" type="ib.schedule.service.LoginVO"/>
+	
+	<!-- 로그인 처리를 위한 resultMap -->
+	<resultMap id="login" class="ib.schedule.service.LoginVO">
+		<result property="PerSabun"			column="PerSabun"/>
+		<result property="PerNm"			column="PerNm"/>
+		<result property="compositionCd"	column="compositionCd"/>
+		<result property="ComPosition"		column="ComPosition"/>
+		<result property="PerDept"			column="PerDept"/>
+		<result property="DeptNm"			column="DeptNm"/>
+		<result property="TeamLeaderSabun"	column="TeamLeaderSabun"/>
+		<result property="TeamLeaderNm"		column="TeamLeaderNm"/>
+		<result property="PerPosition"		column="PerPosition"/>
+		<result property="PerPositionNm"	column="PerPositionNm"/>
+		<result property="PerJob"			column="PerJob"/>
+		<result property="PerJoinCom"		column="PerJoinCom"/>
+		<result property="PerComTel"		column="PerComTel"/>
+		<result property="PerId"			column="PerId"/>
+		<result property="PerPW"			column="PerPW"/>
+		<result property="PerPhone"			column="PerPhone"/>
+		<result property="PerEmail"			column="PerEmail"/>
+		<result property="PerAddr"			column="PerAddr"/>
+		<result property="PerBirthday"		column="PerBirthday"/>
+		<result property="MoonFlag"			column="MoonFlag"/>
+		<result property="SeatNum"			column="SeatNum"/>
+		<result property="GMailId"			column="GMailId"/>
+		<result property="GMailPW"			column="GMailPW"/>
+		<result property="HolidayFlag"		column="HolidayFlag"/>
+		<result property="EmpFlag"			column="EmpFlag"/>
+		<result property="CusRFlag"			column="CusRFlag"/>
+		<result property="CusWFlag"			column="CusWFlag"/>
+		<result property="MasterFlag"		column="MasterFlag"/>
+		<result property="IB_ID"			column="IB_ID"/>
+		<result property="IB_PW"			column="IB_PW"/>
+		<result property="FileSeq"			column="FileSeq"/>
+		<result property="FileNm"			column="FileNm"/>
+		<result property="FileUpNm"			column="FileUpNm"/>
+		<result property="FilePath"			column="FilePath"/>
+		<result property="FileSize"			column="FileSize"/>
+		<result property="FileOrder"		column="FileOrder"/>
+		
+		<result property="usrCusId"			column="usrCusId"/>
+		<result property="staffSnb"			column="staffSnb"/>
+		<result property="division"			column="division"/>
+	</resultMap>
+
+	<!-- 로그인 완료 -->
+	<select id="loginDAO.LoginEnd" resultMap="login">
+		 SELECT erp.PerSabun, PerNm, compositionCd, ComPosition, PerDept, DeptNm, TeamLeaderSabun, TeamLeaderNm, PerPosition, PerPositionNm,
+			PerJob, PerJoinCom, PerComTel, PerId, PerPW,
+			Usr_Id IB_ID, Usr_PW IB_PW, PerPhone, PerEmail, PerAddr, PerBirthday, MoonFlag, SeatNum,
+			GMailId, GMailPW, HolidayFlag, EmpFlag, CusRFlag, CusWFlag, MasterFlag,
+			IFNULL(FileSeq, '') FileSeq, IFNULL(FileNm, '') FileNm, IFNULL(FileUpNm, '') FileUpNm, IFNULL(FilePath, '') FilePath, IFNULL(FileSize, '0') FileSize, IFNULL(FileOrder, '0') FileOrder
+			,ib.cus_id		as usrCusId
+			,ib.s_nb		as staffSnb
+			,ib.division	as division
+		FROM (
+			SELECT emp.PerSabun, PerNm, compositionCd, ComPosition, PerDept, DeptNm, TeamLeaderSabun, TeamLeaderNm,
+				PerPosition, PerPositionNm, PerJob, PerJoinCom, PerComTel, PerId, PerPW,
+				PerPhone, PerEmail, PerAddr, PerBirthday, MoonFlag, SeatNum,
+				GMailId, GMailPW, HolidayFlag, EmpFlag, CusRFlag, CusWFlag, MasterFlag
+			FROM
+				(SELECT PerSabun, PerNm
+					  , ComPosition compositionCd
+					  , (select hq_name from base.bs_company_hq where hq_id = a.ComPosition) ComPosition
+					  , PerDept, DeptNm, TeamLeaderSabun, TeamLeaderNm
+					  ,	PerPosition
+					  , (SELECT positionNm FROM erp.erp_per_position where positionCd = a.PerPosition) PerPositionNm
+					  , PerJob, PerJoinCom, PerComTel, PerId, PerPW,
+					PerPhone, PerEmail, PerAddr, PerBirthday, MoonFlag, SeatNum, GMailId, GMailPW, HolidayFlag
+				FROM erp.ERP_Per a,
+					(SELECT DeptSeq, DeptNm, IFNULL(TeamLeaderSabun, '') TeamLeaderSabun, 
+						IFNULL((SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = TeamLeaderSabun), '') TeamLeaderNm, DeptOrder
+					FROM erp.ERP_Per_Dept WHERE DelFlag = 'N') b
+				WHERE PerId = #PerId# AND a.PerDept = b.DeptSeq) emp,
+				(SELECT PerSabun, EmpFlag, CusRFlag, CusWFlag, MasterFlag FROM erp.ERP_Per_Permission WHERE DelFlag = 'N') permi
+			WHERE emp.PerSabun = permi.PerSabun) erp 
+			
+			LEFT OUTER JOIN IB_STAFF ib
+			ON erp.PerSabun = ib.Sabun
+		
+			LEFT OUTER JOIN erp.ERP_Per_Card card
+			ON erp.PerSabun = card.PerSabun AND card.DelFlag = 'N' 
+		
+	</select>
+	
+<!-- 	로그인자에게 온 결재 및 요청문서 -->
+	<!-- 로그인자 오늘 일정 -->
+	<select id="loginDAO.GetTodayScheduleList" resultClass="egovMap">
+		SELECT ScheSeq, ScheGrpCd, PerSabun, ScheGubun, ScheType, ViewTime,
+			ScheSYear, ScheSMonth, ScheSDay, ScheSDate, ScheSTimeAMPM, ScheSTime,
+			ScheEYear, ScheEMonth, ScheEDay, ScheEDate, ScheETimeAMPM, ScheETime, ScheAllTime,
+			CAST(CONCAT(ScheSYear, '-', ScheSMonth, '-', ScheSDay) AS DATE) AlarmDate,
+			ScheTitle, ScheArea, ScheCon, CalNm, ExtraDay,
+			ScheRepetFlag, ScheAlarmFlag, ScheAlarmHow, ScheImportant, ScheChkFlag, SchePublicFlag, SchePeriodFlag,
+			ScheRepetFlagNm, ScheAlarmFlagNm, ScheAlarmHowNm, ScheImportantNm, Entry FROM (
+			SELECT sche.ScheSeq, ScheGrpCd, sche.PerSabun, ScheGubun, ScheType, ViewTime,
+			ScheSYear, ScheSMonth, ScheSDay, ScheSDate, ScheSTimeAMPM, ScheSTime,
+			ScheEYear, ScheEMonth, ScheEDay, ScheEDate, ScheETimeAMPM, ScheETime, ScheAllTime,
+			ScheTitle, ScheArea, ScheCon, CalNm, ExtraDay,
+			ScheRepetFlag, ScheAlarmFlag, ScheAlarmHow, ScheImportant, ScheChkFlag, SchePublicFlag, SchePeriodFlag,
+			ScheRepetFlagNm, ScheAlarmFlagNm, ScheAlarmHowNm, ScheImportantNm, GROUP_CONCAT(entry.PerSabun) Entry FROM (
+		SELECT ScheSeq, ScheGrpCd, PerSabun, ScheGubun, ScheType,
+			CASE WHEN ScheAllTime = 'N' THEN
+					(CASE WHEN ScheSTimeAMPM = 'PM' AND SUBSTRING(ScheSTime, 1, 2) != '12'
+						THEN CONCAT(REPLACE(SUBSTRING(ScheSTime, 1, 2), ':', '') + 12, ':', REPLACE(SUBSTRING(ScheSTime, 3), ':', '')) ELSE ScheSTime END)
+				ELSE 'A' END ViewTime,
+			ScheSYear, ScheSMonth, ScheSDay, ScheSDate, ScheSTimeAMPM, ScheSTime,
+			ScheEYear, ScheEMonth, ScheEDay, ScheEDate, ScheETimeAMPM, ScheETime, ScheAllTime,
+			ScheTitle, ScheArea, ScheCon,
+			CASE DAYOFWEEK(ScheSDate) WHEN 1 THEN '일' WHEN 2 THEN '월' WHEN 3 THEN '화' WHEN 4 THEN '수' WHEN 5 THEN '목' WHEN 6 THEN '금' ELSE '토' END CalNm, DATEDIFF(ScheSDate, NOW()) ExtraDay,
+			ScheRepetFlag, ScheAlarmFlag, ScheAlarmHow, ScheImportant, ScheChkFlag, SchePublicFlag, SchePeriodFlag,
+			CASE ScheRepetFlag WHEN 'Year' THEN '매년' WHEN 'Quarter' THEN '분기' WHEN 'Month' THEN '매월' WHEN 'Week' THEN '매주' WHEN 'Date' THEN '매일' ELSE '없음' END ScheRepetFlagNm,
+			CASE ScheAlarmFlag WHEN '7' THEN '일주일전' WHEN '0' THEN '당일' WHEN 'None' THEN '없음' ELSE CONCAT('직접입력 (', ScheAlarmFlag, '일전)') END ScheAlarmFlagNm,
+			CASE ScheAlarmHow WHEN 'Pop' THEN '팝업만' WHEN 'PopSMS' THEN '팝업, 문자 모두' ELSE '없음' END ScheAlarmHowNm,
+			CASE ScheImportant WHEN 'top' THEN '상' WHEN 'middle' THEN '중' ELSE '하' END ScheImportantNm
+		FROM erp.ERP_Schedule
+		WHERE DelFlag = 'N' AND CONCAT(ScheSYear, ScheSMonth, ScheSDay) = DATE_FORMAT(NOW(), '%Y%c%e')) sche
+		LEFT OUTER JOIN
+			(SELECT ScheSeq, PerSabun FROM erp.ERP_ScheduleEntry WHERE DelFlag = 'N') entry
+			ON sche.ScheSeq = entry.ScheSeq
+			GROUP BY sche.ScheSeq) a
+		WHERE ((SchePublicFlag = 'N' AND PerSabun = #PerSabun#) OR Entry LIKE '%$PerSabun$%')
+		AND ScheSDate = DATE_FORMAT(NOW(), '%Y-%m-%d')
+				ORDER BY ScheSDate, CAST(REPLACE(ViewTime, ':', '') AS UNSIGNED), ScheImportant DESC
+	</select>
+	
+	<!-- 오늘 생일자 -->
+	<select id="loginDAO.GetPerBirthdayList" resultClass="egovMap">
+		SELECT PerSabun, PerNm, PerBirthDay, MoonFlag FROM (
+			SELECT PerSabun, CONCAT(PerNm, ' ', PerPositionNm) PerNm, DATE_FORMAT(Solar_Date, '%Y-%m-%d') PerBirthDay, MoonFlag FROM Lunar_Solar a, erp.ERP_Per b
+				WHERE DATE_FORMAT(Lunar_Date, '%m-%d') = DATE_FORMAT(PerBirthDay, '%m-%d')
+					AND DATE_FORMAT(Solar_Date, '%Y') = DATE_FORMAT(NOW(), '%Y') AND MoonFlag = 'L'
+					AND Viewflag = 'Y' AND DelFlag = 'N'
+				UNION ALL
+				SELECT PerSabun, CONCAT(PerNm, ' ', PerPositionNm) PerNm, CONCAT(DATE_FORMAT(NOW(), '%Y'), DATE_FORMAT(PerBirthDay, '-%m-%d')) PerBirthDay, MoonFlag FROM erp.ERP_Per
+				WHERE MoonFlag = 'S' AND Viewflag = 'Y' AND DelFlag = 'N') a
+		WHERE PerBirthDay = DATE_FORMAT(NOW(), '%Y-%m-%d')
+	</select>
+	
+
+	<!-- 오늘 부재중인 사원 -->
+	<select id="loginDAO.GetHoliPerList" resultClass="egovMap">
+		SELECT PerSabun, (SELECT PerNm FROM erp.ERP_Per WHERE PerSabun = a.PerSabun) PerNm,
+		    HoliFlag, HoliFlagNm
+		FROM
+		    (SELECT PerSabun, HoliFlag,
+				CASE HoliFlag WHEN 'all' THEN '연차' ELSE CASE HalfFlag WHEN 'am' THEN '오전반차' ELSE '오후반차' END END HoliFlagNm
+		    FROM erp.ERP_HolidayStatus
+		    WHERE HoliUseDate = DATE_FORMAT(NOW(), '%Y-%m-%d') AND DelFlag = 'N'
+		UNION ALL
+		SELECT PerSabun, 'all', ScheTitle
+		    FROM erp.ERP_Schedule
+		    WHERE ScheType = 'Holiday' AND ScheTitle = '경조휴가' AND DelFlag = 'N'
+	            AND DATE_FORMAT(CONCAT(ScheSYear, '-', ScheSMonth, '-', ScheSDay), '%Y%m%d') = DATE_FORMAT(NOW(), '%Y%m%d')) a
+	</select>
+	
+	
+	<!-- 명함 파일 코드 받아오기 -->
+	<select id="loginDAO.GetEmployeeCardFileCd" parameterClass="loginVO" resultClass="int">
+		SELECT IFNULL(MAX(FileSeq) + 1, '1') FileSeq FROM erp.ERP_Per_Card WHERE PerSabun = #PerSabun#
+	</select>
+	
+	<!-- 명함 파일 등록 완료 -->
+	<insert id="loginDAO.EmployeeCardFileAddEnd" parameterClass="java.util.List">
+		INSERT INTO erp.ERP_Per_Card (PerSabun, FileSeq, FileNm, FileUpNm, FilePath, FileSize, FileOrder, RegDate, RegPerSabun, DelFlag) VALUES
+		<dynamic>
+		<iterate conjunction=","  >
+		 (#[].PerSabun#, LPAD(#[].FileSeq#, 12, 0), #[].FileNm#, #[].FileUpNm#, #[].FilePath#, #[].FileSize#, #[].FileOrder#, now(), #[].RegPerSabun#, 'N')
+		</iterate>
+		</dynamic>
+	</insert>
+	
+	<!-- 명함 파일 삭제 완료 -->
+	<update id="loginDAO.EmployeeCardFileDelEnd">
+		UPDATE erp.ERP_Per_Card SET DelFlag = 'Y', DelDate = now(), DelPerSabun = #RegPerSabun# WHERE PerSabun = #PerSabun# AND FileSeq = #FileSeq#
+	</update>
+	
+	<!-- 내정보 수정완료 -->
+	<update id="loginDAO.MyInfoEditEnd">
+		UPDATE erp.ERP_Per 
+		SET <isNotEmpty property="GMailId">GMailId = #GMailId#,</isNotEmpty>
+			<isNotEmpty property="GMailPW">GMailPW = #GMailPW#,</isNotEmpty>
+			PerBirthday = #PerBirthday#, MoonFlag = #MoonFlag#, ComPosition = #ComPosition#,
+			PerDept = #PerDept#, PerPositionNm = #PerPositionNm#, PerJob = #PerJob#,
+			PerComTel = #PerComTel#, PerEmail = #PerEmail#, PerPhone = #PerPhone#, PerAddr = #PerAddr#
+		WHERE PerSabun = #PerSabun# 
+	 	AND DelFlag = 'N'
+	</update>
+	
+	
+	<!-- 내 권한 수정완료 -->
+<!-- 	<update id="loginDAO.MyInfoPermiEditEnd"> -->
+<!-- 		UPDATE erp.ERP_Per_Permission SET EmpFlag = #EmpFlag#, CusRFlag = #CusRFlag#, CusWFlag = #CusWFlag# WHERE PerSabun = #PerSabun# AND DelFlag = 'N' -->
+<!-- 	</update> -->
+	
+	<!-- 비밀번호 수정완료 -->
+	<update id="loginDAO.MyPWEditEnd">
+		UPDATE erp.ERP_Per SET PerPW = #NewPerPW# WHERE PerSabun = #PerSabun# AND DelFlag = 'N'
+	</update>
+	
+	<!-- 아이디/비밀번호 찾기 완료 -->
+	<select id="loginDAO.SearchEnd" resultMap="login">
+		 SELECT PerSabun, PerNm, ComPosition, PerDept, PerPositionNm, PerJob, PerJoinCom,
+			PerComTel, PerId, PerPW, PerPhone, PerEmail, PerAddr, PerBirthday, MoonFlag, SeatNum,
+		    GMailId, GMailPW, HolidayFlag, '' EmpFlag, '' CusRFlag, '' CusWFlag, '' MasterFlag,
+			Usr_Id IB_ID, Usr_PW IB_PW
+		FROM erp.ERP_Per emp, IB_STAFF ib
+		WHERE emp.PerNm = #PerNm# AND emp.PerPhone = #PerPhone# AND emp.PerEmail = #PerEmail#
+			AND emp.DelFlag = 'N' AND emp.PerNm = ib.Usr_Nm
+	</select>
+	
+		<!-- 사용자별 구글캘린더 인증 정보 및 캘린더 정보 가져오기 -->
+	<select id="loginDAO.GetGoogleAuthInfo" resultClass="egovMap">
+		SELECT PERSABUN, IFNULL(AUTH_FLAG,'N') AUTH_FLAG, IFNULL(EMAIL_ADDR, 'NONE') EMAIL_ADDR, IFNULL(CALENDAR_ID, 'NONE') CALENDAR_ID,
+		ACCESS_TOKEN, REFRESH_TOKEN  
+		FROM ERP.ERP_PER PER
+		LEFT JOIN 
+		ERP.ERP_PER_GCALENDAR GCAL
+		ON 
+		PER.PERSABUN=GCAL.PER_SABUN
+		WHERE 
+			 DELFLAG='N' AND 
+		     PERSABUN = #PerSabun#		    
+	</select> 
+	
+	<!-- 인증 이메일 정보 업데이트 -->
+	<update id="loginDAO.InsertGoogleEmail">
+		INSERT INTO erp.ERP_PER_GCALENDAR (PER_SABUN, EMAIL_ADDR)
+		VALUES(#PerSabun#, #emailAddr#)
+		ON DUPLICATE KEY 
+		UPDATE 
+			EMAIL_ADDR = VALUES(EMAIL_ADDR)		
+	</update>
+	
+	<!-- AccessToken, RefreshToken 업데이트 -->
+	<update id="loginDAO.InsertGoogleTokenInfo">
+		INSERT INTO erp.ERP_PER_GCALENDAR (PER_SABUN, AUTH_FLAG, ACCESS_TOKEN, REFRESH_TOKEN)
+		VALUES(#PerSabun#, #authFlag#, #accessToken#, #refreshToken#)
+		ON DUPLICATE KEY 
+		UPDATE 
+			AUTH_FLAG = VALUES(AUTH_FLAG),
+			ACCESS_TOKEN = VALUES(ACCESS_TOKEN),
+			REFRESH_TOKEN = VALUES(REFRESH_TOKEN)	
+	</update>
+	
+	<!-- 구글계정 연동정보 삭제 -->
+	<update id="loginDAO.UnlinkGoogleAccount">
+		UPDATE erp.ERP_PER_GCALENDAR
+		SET
+			AUTH_FLAG = 'N',
+			ACCESS_TOKEN = '',
+			REFRESH_TOKEN = ''
+		WHERE
+			PER_SABUN = #PerSabun#	
+	</update>
+	
+	<!-- 구글계정 달력ID 업데이트 -->
+	<update id="loginDAO.UpdateGoogleCalendarInfo">
+		UPDATE erp.ERP_PER_GCALENDAR
+		SET
+			CALENDAR_ID = #calendarId#			
+		WHERE
+			PER_SABUN = #PerSabun#	
+	</update>
+	
+</sqlMap>
